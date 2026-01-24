@@ -1,0 +1,20 @@
+{
+    "name": "排班日历",
+    "short_name": "排班日历",
+    "description": "智能排班规律管理，支持白班、夜班、休息等多种班次类型",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#0a0a14",
+    "theme_color": "#6366f1",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗓️</text></svg>",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": ["productivity", "utilities"],
+    "lang": "zh-CN"
+}
