@@ -1395,44 +1395,158 @@ body {
         width: 100%;
         flex-direction: row;
         flex-wrap: wrap;
+        gap: var(--space-md);
     }
 
     .sidebar .card {
         flex: 1;
-        min-width: 300px;
+        min-width: 280px;
     }
 }
 
 @media (max-width: 768px) {
+
+    /* 头部优化 */
     .header {
-        padding: var(--space-md);
+        padding: var(--space-sm) var(--space-md);
+        flex-wrap: wrap;
+        gap: var(--space-sm);
+    }
+
+    .header-left {
+        gap: var(--space-sm);
+    }
+
+    .logo {
+        font-size: 24px;
     }
 
     .header h1 {
-        font-size: 20px;
+        font-size: 18px;
     }
 
+    .header-right {
+        display: flex;
+        gap: var(--space-xs);
+        flex-wrap: wrap;
+    }
+
+    .header-right .btn {
+        padding: var(--space-xs) var(--space-sm);
+        font-size: 12px;
+    }
+
+    .header-right .btn-icon-only {
+        width: 32px;
+        height: 32px;
+    }
+
+    /* 隐藏按钮文字，只显示图标 */
+    .header-right #historyBtn span:not(.btn-icon),
+    .header-right #exportBtn span:not(.btn-icon) {
+        display: none;
+    }
+
+    /* 侧边栏优化 */
+    .sidebar {
+        flex-direction: column;
+        gap: var(--space-sm);
+    }
+
+    .sidebar .card {
+        min-width: 100%;
+    }
+
+    .card-body {
+        padding: var(--space-md);
+    }
+
+    /* 倒计时卡片移动端优化 */
+    .countdown-card .card-body {
+        padding: var(--space-md);
+    }
+
+    .countdown-value {
+        font-size: 42px;
+    }
+
+    .countdown-days {
+        font-size: 16px;
+    }
+
+    /* 日历控制栏 */
     .calendar-controls {
         flex-direction: column;
         align-items: stretch;
+        padding: var(--space-sm);
+        gap: var(--space-sm);
     }
 
-    .range-selector,
-    .calendar-nav {
+    .range-selector {
+        flex-wrap: wrap;
         justify-content: center;
     }
 
+    .range-selector .label {
+        width: 100%;
+        text-align: center;
+        margin-bottom: var(--space-xs);
+    }
+
+    .btn-group {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .calendar-nav {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .date-picker {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    /* 日历格子 - 更紧凑但保持可读 */
     .calendar-day {
-        min-height: 80px;
-        padding: var(--space-xs);
+        min-height: 70px;
+        padding: 4px;
+    }
+
+    .day-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0;
     }
 
     .day-number {
         font-size: 14px;
+        font-weight: 700;
     }
 
+    /* 移动端显示农历（精简版） */
+    .lunar-day {
+        display: block !important;
+        font-size: 9px;
+        margin-top: 1px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+    }
+
+    .lunar-day.holiday-name,
+    .lunar-day.solar-term {
+        font-size: 9px;
+        font-weight: 600;
+    }
+
+    /* 班次显示优化 */
     .day-shift {
-        padding: var(--space-xs);
+        padding: 4px;
+        margin-top: 2px;
+        border-radius: 6px;
     }
 
     .shift-icon {
@@ -1441,10 +1555,154 @@ body {
 
     .shift-name {
         font-size: 9px;
+        letter-spacing: 0;
+    }
+
+    /* 各种标记优化 */
+    .today-badge {
+        font-size: 8px;
+        padding: 1px 4px;
+    }
+
+    .day-override-badge,
+    .todo-indicator {
+        font-size: 8px;
+        padding: 1px 3px;
+    }
+
+    .work-status {
+        border-width: 20px 20px 0 0;
+    }
+
+    .work-status-text {
+        font-size: 8px;
+        top: -18px;
+    }
+
+    .important-date-badge {
+        font-size: 10px;
+    }
+
+    .day-note-indicator {
+        font-size: 8px;
+    }
+
+    /* 隐藏hover提示 */
+    .calendar-day:not(.empty):hover::after {
+        display: none;
+    }
+
+    /* 模态框优化 */
+    .modal-content {
+        width: 95%;
+        max-height: 90vh;
+        margin: var(--space-md);
+    }
+
+    .modal-header {
+        padding: var(--space-md);
+    }
+
+    .modal-header h2 {
+        font-size: 16px;
+    }
+
+    .modal-body {
+        padding: var(--space-md);
+    }
+
+    .modal-footer {
+        padding: var(--space-md);
+        flex-wrap: wrap;
+    }
+
+    /* 表单优化 - 更大的触摸区域 */
+    .form-input,
+    .form-select {
+        padding: var(--space-md);
+        font-size: 16px;
+        /* 防止iOS缩放 */
+    }
+
+    .pattern-btn {
+        padding: var(--space-sm) var(--space-md);
+        font-size: 14px;
+    }
+
+    .pattern-item {
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+
+    /* 班次选择按钮 - 更大触摸区域 */
+    .day-edit-shift-btn,
+    .shift-option-btn {
+        padding: var(--space-md);
+        min-height: 60px;
+    }
+
+    .day-edit-shift-btn .shift-icon,
+    .shift-option-btn .shift-icon {
+        font-size: 28px;
+    }
+
+    /* 下拉菜单适配 */
+    .dropdown-menu {
+        min-width: 160px;
+    }
+
+    .dropdown-item {
+        padding: var(--space-md);
+        font-size: 14px;
+    }
+
+    /* 统计卡片 */
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* 月历头部 */
+    .month-header {
+        padding: var(--space-md);
+        font-size: 18px;
+    }
+
+    .weekday-header {
+        padding: var(--space-sm);
+        font-size: 11px;
+    }
+}
+
+/* 超小屏幕 (< 400px) */
+@media (max-width: 400px) {
+    .main-content {
+        padding: var(--space-sm);
+    }
+
+    .calendar-day {
+        min-height: 60px;
+        padding: 2px;
+    }
+
+    .day-number {
+        font-size: 12px;
     }
 
     .lunar-day {
-        display: none;
+        font-size: 8px;
+    }
+
+    .shift-icon {
+        font-size: 14px;
+    }
+
+    .shift-name {
+        font-size: 8px;
+    }
+
+    .btn-range {
+        padding: 4px 8px;
+        font-size: 11px;
     }
 }
 
