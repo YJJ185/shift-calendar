@@ -1671,6 +1671,65 @@ function closeExportDropdown() {
     dropdown.classList.remove('active');
 }
 
+// 移动端底部导出菜单
+function showMobileExportMenu() {
+    // 创建底部弹出菜单
+    const existingMenu = $('#mobileExportMenu');
+    if (existingMenu) {
+        existingMenu.remove();
+    }
+
+    const menu = document.createElement('div');
+    menu.id = 'mobileExportMenu';
+    menu.className = 'mobile-export-menu';
+    menu.innerHTML = `
+        <div class="mobile-export-overlay"></div>
+        <div class="mobile-export-content">
+            <div class="mobile-export-header">导出选项</div>
+            <button class="mobile-export-item" data-action="image">
+                🖼️ 导出为图片
+            </button>
+            <button class="mobile-export-item" data-action="json">
+                💾 导出数据备份
+            </button>
+            <button class="mobile-export-item" data-action="import">
+                📂 导入数据
+            </button>
+            <button class="mobile-export-item cancel">
+                取消
+            </button>
+        </div>
+    `;
+    document.body.appendChild(menu);
+
+    // 显示动画
+    requestAnimationFrame(() => {
+        menu.classList.add('active');
+    });
+
+    // 绑定事件
+    menu.querySelector('.mobile-export-overlay').addEventListener('click', closeMobileExportMenu);
+    menu.querySelector('.cancel').addEventListener('click', closeMobileExportMenu);
+
+    menu.querySelectorAll('.mobile-export-item[data-action]').forEach(item => {
+        item.addEventListener('click', () => {
+            const action = item.dataset.action;
+            closeMobileExportMenu();
+            if (action === 'image') exportAsImage();
+            else if (action === 'json') exportAsJson();
+            else if (action === 'import') $('#importJsonBtn')?.click();
+        });
+    });
+}
+
+function closeMobileExportMenu() {
+    const menu = $('#mobileExportMenu');
+    if (menu) {
+        menu.classList.remove('active');
+        setTimeout(() => menu.remove(), 300);
+    }
+}
+
 async function exportAsImage() {
     closeExportDropdown();
     showToast('正在生成图片...');
@@ -1948,7 +2007,8 @@ function initNewFeatures() {
     });
     $('#mobileNavExport')?.addEventListener('click', () => {
         closeMobileSidebar();
-        toggleExportDropdown();
+        // 在移动端显示底部导出菜单
+        showMobileExportMenu();
     });
 
     // 移动端侧边栏遮罩点击关闭

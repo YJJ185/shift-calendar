@@ -2846,3 +2846,80 @@ body {
     color: var(--text-muted);
     font-size: 14px;
 }
+
+/* ===== 移动端导出弹出菜单 ===== */
+.mobile-export-menu {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.mobile-export-menu.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.mobile-export-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+}
+
+.mobile-export-content {
+    position: relative;
+    width: 100%;
+    background: var(--bg-card);
+    border-radius: 16px 16px 0 0;
+    padding: 16px;
+    padding-bottom: calc(16px + 70px);
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+}
+
+.mobile-export-menu.active .mobile-export-content {
+    transform: translateY(0);
+}
+
+.mobile-export-header {
+    text-align: center;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    padding: 8px 0 16px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 8px;
+}
+
+.mobile-export-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 16px;
+    background: none;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.mobile-export-item:hover,
+.mobile-export-item:active {
+    background: var(--bg-hover);
+}
+
+.mobile-export-item.cancel {
+    color: var(--text-muted);
+    justify-content: center;
+    margin-top: 8px;
+    border-top: 1px solid var(--border-color);
+    border-radius: 0;
+}
