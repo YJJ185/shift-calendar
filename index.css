@@ -2455,6 +2455,9 @@ body {
 
     /* 移动端侧边栏 - 默认隐藏，滑出面板 */
     .sidebar {
+        display: flex;
+        flex-direction: column;
+        flex-wrap: nowrap;
         position: fixed;
         top: 0;
         left: 0;
@@ -2469,10 +2472,26 @@ body {
         border: none;
         border-right: 1px solid var(--border-color);
         box-shadow: var(--shadow-lg);
+        background: var(--bg-card);
+        /* 确保有背景色 */
     }
 
     .sidebar.mobile-open {
         transform: translateX(0);
+    }
+
+    .sidebar .card {
+        min-width: 0;
+        /* 修复 flex 子项溢出 */
+        border-radius: 0;
+        border: none;
+        border-bottom: 1px solid var(--border-color);
+        box-shadow: none;
+        margin-bottom: 0;
+    }
+
+    .sidebar-content {
+        padding: 0;
     }
 
     /* 侧边栏打开时的遮罩 */
