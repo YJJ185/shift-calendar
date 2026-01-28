@@ -1751,7 +1751,11 @@ async function exportAsImage() {
 
         const canvas = await html2canvas(container, {
             backgroundColor: getComputedStyle(document.body).backgroundColor,
-            scale: 2
+            scale: 3, // 更高的缩放比例获得更清晰的图片
+            useCORS: true,
+            logging: false,
+            allowTaint: true,
+            imageTimeout: 0
         });
 
         const link = document.createElement('a');
