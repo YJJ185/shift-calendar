@@ -2452,6 +2452,53 @@ body {
     .header-right #historyBtn {
         display: none;
     }
+
+    /* 移动端侧边栏 - 默认隐藏，滑出面板 */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 85%;
+        max-width: 360px;
+        height: 100vh;
+        max-height: 100vh;
+        z-index: 900;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease-out;
+        border-radius: 0;
+        border: none;
+        border-right: 1px solid var(--border-color);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .sidebar.mobile-open {
+        transform: translateX(0);
+    }
+
+    /* 侧边栏打开时的遮罩 */
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 899;
+        opacity: 0;
+        transition: opacity 0.3s ease-out;
+    }
+
+    .sidebar-overlay.active {
+        display: block;
+        opacity: 1;
+    }
+
+    /* 移动端主内容区 */
+    .main-content {
+        padding: var(--space-sm);
+    }
+
+    .calendar-section {
+        width: 100%;
+    }
 }
 
 /* ===== 月历切换动画增强 ===== */

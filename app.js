@@ -1774,6 +1774,29 @@ function printCalendar() {
     window.print();
 }
 
+// ===== 移动端侧边栏控制 =====
+function toggleMobileSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = $('#sidebarOverlay');
+
+    if (sidebar.classList.contains('mobile-open')) {
+        closeMobileSidebar();
+    } else {
+        sidebar.classList.add('mobile-open');
+        overlay?.classList.add('active');
+        document.body.style.overflow = 'hidden'; // 防止背景滚动
+    }
+}
+
+function closeMobileSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = $('#sidebarOverlay');
+
+    sidebar?.classList.remove('mobile-open');
+    overlay?.classList.remove('active');
+    document.body.style.overflow = ''; // 恢复滚动
+}
+
 // ===== 新功能：手势滑动 =====
 let touchStartX = 0;
 let touchEndX = 0;
@@ -1898,17 +1921,24 @@ function initNewFeatures() {
 
     // 移动端底部导航
     $('#mobileNavToday')?.addEventListener('click', () => {
+        closeMobileSidebar();
         goToToday();
         showToast('已跳转到今天');
     });
     $('#mobileNavGenerate')?.addEventListener('click', () => {
-        // 滚动到生成按钮区域
-        $('#generateBtn')?.scrollIntoView({ behavior: 'smooth' });
+        toggleMobileSidebar();
     });
-    $('#mobileNavHistory')?.addEventListener('click', openHistoryModal);
+    $('#mobileNavHistory')?.addEventListener('click', () => {
+        closeMobileSidebar();
+        openHistoryModal();
+    });
     $('#mobileNavExport')?.addEventListener('click', () => {
+        closeMobileSidebar();
         toggleExportDropdown();
     });
+
+    // 移动端侧边栏遮罩点击关闭
+    $('#sidebarOverlay')?.addEventListener('click', closeMobileSidebar);
 
     // 侧边栏Tab切换
     initSidebarTabs();
