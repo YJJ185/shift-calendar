@@ -2455,18 +2455,21 @@ body {
 }
 
 @media (max-width: 768px) {
+
+    /* 底部导航栏显示 */
     .mobile-bottom-nav {
         display: block;
     }
 
+    /* 整体容器 - 增加底部padding让内容不被导航栏挡住 */
     .app-container {
-        padding-bottom: 70px;
+        padding-bottom: 80px !important;
         min-height: 100vh;
     }
 
-    /* 移动端header优化 - 保持单行 */
+    /* 移动端header优化 - 保持紧凑单行 */
     .header {
-        padding: var(--space-xs) var(--space-sm);
+        padding: 6px 12px;
         flex-wrap: nowrap;
     }
 
@@ -2475,11 +2478,11 @@ body {
     }
 
     .header h1 {
-        font-size: 16px;
+        font-size: 15px;
     }
 
     .logo {
-        font-size: 20px;
+        font-size: 18px;
     }
 
     .header-right {
@@ -2488,28 +2491,27 @@ body {
     }
 
     .btn-icon-only {
-        width: 32px;
-        height: 32px;
-        font-size: 16px;
+        width: 30px;
+        height: 30px;
+        font-size: 14px;
     }
 
-    /* 移动端隐藏桌面版导出按钮 */
+    /* 移动端隐藏桌面版导出和历史按钮 */
     .header-right .dropdown,
     .header-right #historyBtn {
         display: none;
     }
 
-    /* 移动端侧边栏 - 默认隐藏，滑出面板 */
+    /* ====== 关键修复：侧边栏完全脱离文档流 ====== */
     .sidebar {
         position: fixed !important;
-        top: 0;
-        left: 0;
-        width: 85%;
-        max-width: 360px;
-        height: 100vh;
-        max-height: 100vh;
-        z-index: 900;
-        transform: translateX(-100%);
+        top: 0 !important;
+        left: 0 !important;
+        width: 85% !important;
+        max-width: 360px !important;
+        height: 100vh !important;
+        z-index: 900 !important;
+        transform: translateX(-100%) !important;
         transition: transform 0.3s ease-out;
         border-radius: 0;
         border: none;
@@ -2518,11 +2520,11 @@ body {
         background: var(--bg-card);
         display: flex;
         flex-direction: column;
-        flex-wrap: nowrap;
+        overflow-y: auto;
     }
 
     .sidebar.mobile-open {
-        transform: translateX(0);
+        transform: translateX(0) !important;
     }
 
     .sidebar .card {
@@ -2536,9 +2538,15 @@ body {
 
     .sidebar-content {
         padding: 0;
+        flex: 1;
+        overflow-y: auto;
     }
 
-    /* 侧边栏打开时的遮罩 */
+    .sidebar-footer {
+        flex-shrink: 0;
+    }
+
+    /* 侧边栏遮罩 */
     .sidebar-overlay {
         display: none;
         position: fixed;
@@ -2554,23 +2562,25 @@ body {
         opacity: 1;
     }
 
-    /* 移动端主内容区 - 确保日历直接显示 */
+    /* ====== 关键修复：主内容区直接显示日历 ====== */
     .main-content {
-        display: block;
-        padding: var(--space-sm);
-        padding-top: 0;
+        display: block !important;
+        padding: 8px !important;
+        padding-bottom: 0 !important;
     }
 
+    /* 日历区域 */
     .calendar-section {
-        width: 100%;
-        min-height: calc(100vh - 140px);
+        width: 100% !important;
+        margin: 0 !important;
     }
 
-    /* 移动端日历控制栏优化 */
+    /* 日历控制栏 */
     .calendar-controls {
         flex-direction: column;
-        gap: var(--space-sm);
-        padding: var(--space-sm);
+        gap: 8px;
+        padding: 8px;
+        margin-bottom: 8px;
     }
 
     .range-selector {
@@ -2582,12 +2592,17 @@ body {
         display: none;
     }
 
+    .btn-range {
+        padding: 4px 10px;
+        font-size: 12px;
+    }
+
     .calendar-nav {
         width: 100%;
         justify-content: center;
     }
 
-    /* 移动端日历格子优化 */
+    /* 日历格子 */
     .calendar-grid {
         gap: 2px;
     }
@@ -2607,6 +2622,19 @@ body {
 
     .day-shift {
         font-size: 10px;
+    }
+
+    /* 空状态提示 */
+    .empty-state {
+        padding: 40px 20px;
+    }
+
+    .empty-state h3 {
+        font-size: 16px;
+    }
+
+    .empty-state p {
+        font-size: 13px;
     }
 }
 
