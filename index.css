@@ -2501,10 +2501,7 @@ body {
 
     /* 移动端侧边栏 - 默认隐藏，滑出面板 */
     .sidebar {
-        display: flex;
-        flex-direction: column;
-        flex-wrap: nowrap;
-        position: fixed;
+        position: fixed !important;
         top: 0;
         left: 0;
         width: 85%;
@@ -2519,6 +2516,9 @@ body {
         border-right: 1px solid var(--border-color);
         box-shadow: var(--shadow-lg);
         background: var(--bg-card);
+        display: flex;
+        flex-direction: column;
+        flex-wrap: nowrap;
     }
 
     .sidebar.mobile-open {
