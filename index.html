@@ -26,13 +26,41 @@
                 <h1>排班日历</h1>
             </div>
             <div class="header-right">
-                <button class="btn btn-icon-only" id="themeToggleBtn" title="切换主题">
-                    <span id="themeIcon">🌙</span>
-                </button>
+                <div class="theme-selector" id="themeSelector">
+                    <button class="btn btn-icon-only" id="themeToggleBtn" title="切换主题">
+                        <span id="themeIcon">🎨</span>
+                    </button>
+                    <div class="theme-menu">
+                        <button class="theme-option" data-theme="dark">
+                            <span class="theme-color-dot"
+                                style="background: linear-gradient(135deg, #6366f1, #a855f7)"></span>
+                            深色
+                        </button>
+                        <button class="theme-option" data-theme="light">
+                            <span class="theme-color-dot"
+                                style="background: linear-gradient(135deg, #f8fafc, #e2e8f0)"></span>
+                            亮色
+                        </button>
+                        <button class="theme-option" data-theme="ocean">
+                            <span class="theme-color-dot"
+                                style="background: linear-gradient(135deg, #0ea5e9, #06b6d4)"></span>
+                            深海蓝
+                        </button>
+                        <button class="theme-option" data-theme="forest">
+                            <span class="theme-color-dot"
+                                style="background: linear-gradient(135deg, #10b981, #059669)"></span>
+                            护眼绿
+                        </button>
+                        <button class="theme-option" data-theme="sakura">
+                            <span class="theme-color-dot"
+                                style="background: linear-gradient(135deg, #ec4899, #db2777)"></span>
+                            樱花粉
+                        </button>
+                    </div>
+                </div>
                 <div class="dropdown" id="exportDropdown">
-                    <button class="btn btn-secondary" id="exportBtn">
-                        <span class="btn-icon">📤</span>
-                        导出
+                    <button class="btn btn-icon-only" id="exportBtn" title="导出">
+                        📤
                     </button>
                     <div class="dropdown-menu" id="exportMenu">
                         <button class="dropdown-item" id="exportImageBtn">
@@ -50,9 +78,8 @@
                         </button>
                     </div>
                 </div>
-                <button class="btn btn-secondary" id="historyBtn">
-                    <span class="btn-icon">📋</span>
-                    历史记录
+                <button class="btn btn-icon-only" id="historyBtn" title="历史记录">
+                    📋
                 </button>
             </div>
         </header>
@@ -61,107 +88,133 @@
         <main class="main-content">
             <!-- 侧边栏 -->
             <aside class="sidebar">
-                <!-- 班次类型管理 -->
-                <section class="card">
-                    <div class="card-header">
-                        <h2>班次类型</h2>
-                        <button class="btn btn-icon-only" id="addShiftTypeBtn" title="添加班次">+</button>
-                    </div>
-                    <div class="card-body">
-                        <div class="shift-types-list" id="shiftTypesList">
-                            <!-- 动态生成 -->
-                        </div>
-                    </div>
-                </section>
+                <!-- Tab导航 -->
+                <div class="sidebar-tabs">
+                    <button class="sidebar-tab active" data-tab="schedule">📅 排班</button>
+                    <button class="sidebar-tab" data-tab="stats">📊 统计</button>
+                    <button class="sidebar-tab" data-tab="settings">⚙️ 设置</button>
+                </div>
 
-                <!-- 倒计时卡片 -->
-                <section class="card countdown-card">
-                    <div class="card-body">
-                        <div class="countdown-display" id="countdownDisplay">
-                            <div class="countdown-label">距离下一个休息日</div>
-                            <div class="countdown-value" id="countdownValue">--</div>
-                            <div class="countdown-days">天</div>
-                        </div>
-                        <div class="countdown-next" id="countdownNext">
-                            <!-- 动态显示下一个休息日是哪天 -->
-                        </div>
-                    </div>
-                </section>
-
-                <!-- 重要日期 & 待办 -->
-                <section class="card">
-                    <div class="card-header">
-                        <h2>重要日期 & 待办</h2>
-                        <button class="btn btn-icon-only" id="addImportantDateBtn" title="添加">+</button>
-                    </div>
-                    <div class="card-body">
-                        <div class="important-dates-list" id="importantDatesList">
-                            <div class="empty-hint">点击 + 添加生日、纪念日等</div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- 统计卡片 -->
-                <section class="card">
-                    <div class="card-header">
-                        <h2>本月统计</h2>
-                    </div>
-                    <div class="card-body">
-                        <div class="stats-grid" id="statsGrid">
-                            <div class="stats-empty">生成排班后即可查看统计</div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- 排班规律设置 -->
-                <section class="card">
-                    <div class="card-header">
-                        <h2>排班规律</h2>
-                    </div>
-                    <div class="card-body">
-                        <div class="form-group">
-                            <label for="startDate">起始日期</label>
-                            <input type="date" id="startDate" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label for="startShift">今天是规律中的第几天 <span class="hint">(选择起始日期当天对应的班次)</span></label>
-                            <select id="startShift" class="form-select">
-                                <!-- 动态生成 -->
-                            </select>
-                            <div class="schedule-preview" id="schedulePreview">
-                                <!-- 显示接下来几天的排班预览 -->
+                <!-- Tab内容区 -->
+                <div class="sidebar-content">
+                    <!-- 排班Tab -->
+                    <div class="tab-pane active" id="tabSchedule">
+                        <!-- 班次类型管理（可折叠） -->
+                        <section class="card collapsible collapsed" id="shiftTypesCard">
+                            <div class="card-header collapsible-header">
+                                <h2>📌 班次类型 <span class="collapse-hint">(点击展开)</span></h2>
+                                <div class="header-actions">
+                                    <button class="btn btn-icon-only" id="addShiftTypeBtn" title="添加班次">+</button>
+                                    <span class="collapse-icon">▼</span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="form-group">
-                            <label>规律设置 <span class="hint">(点击添加到规律)</span></label>
-                            <div class="pattern-builder" id="patternBuilder">
-                                <!-- 动态生成可点击的班次按钮 -->
+                            <div class="card-body collapsible-body">
+                                <div class="shift-types-list" id="shiftTypesList">
+                                    <!-- 动态生成 -->
+                                </div>
                             </div>
-                            <div class="pattern-preview" id="patternPreview">
-                                <span class="empty-hint">点击上方班次添加规律...</span>
+                        </section>
+
+                        <!-- 排班规律设置 -->
+                        <section class="card">
+                            <div class="card-header">
+                                <h2>排班规律</h2>
                             </div>
-                            <button class="btn btn-text" id="clearPatternBtn">清空规律</button>
-                        </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="startDate">起始日期</label>
+                                    <input type="date" id="startDate" class="form-input">
+                                </div>
+                                <div class="form-group">
+                                    <label for="startShift">今天是规律中的第几天 <span class="hint">(选择起始日期当天对应的班次)</span></label>
+                                    <select id="startShift" class="form-select">
+                                        <!-- 动态生成 -->
+                                    </select>
+                                    <div class="schedule-preview" id="schedulePreview">
+                                        <!-- 显示接下来几天的排班预览 -->
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>规律设置 <span class="hint">(点击添加到规律)</span></label>
+                                    <div class="pattern-builder" id="patternBuilder">
+                                        <!-- 动态生成可点击的班次按钮 -->
+                                    </div>
+                                    <div class="pattern-preview" id="patternPreview">
+                                        <span class="empty-hint">点击上方班次添加规律...</span>
+                                    </div>
+                                    <button class="btn btn-text" id="clearPatternBtn">清空规律</button>
+                                </div>
 
-                        <!-- 医护排班特殊规则 -->
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="weekendRestMode">
-                                <span>周末非值班自动休息</span>
-                            </label>
-                            <div class="field-hint">开启后，周六日只要没排"值班"，就自动休息</div>
-                        </div>
+                                <!-- 医护排班特殊规则 -->
+                                <div class="form-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="weekendRestMode">
+                                        <span>周末非值班自动休息</span>
+                                    </label>
+                                    <div class="field-hint">开启后，周六日只要没排"值班"，就自动休息</div>
+                                </div>
 
-                        <div class="form-group">
-                            <label for="scheduleName">方案名称</label>
-                            <input type="text" id="scheduleName" class="form-input" placeholder="例如：2026年1月排班">
-                        </div>
-                        <button class="btn btn-primary btn-full" id="generateBtn">
-                            <span class="btn-icon">✨</span>
-                            生成排班
-                        </button>
+                                <div class="form-group">
+                                    <label for="scheduleName">方案名称</label>
+                                    <input type="text" id="scheduleName" class="form-input" placeholder="例如：2026年1月排班">
+                                </div>
+                            </div>
+                        </section>
                     </div>
-                </section>
+
+                    <!-- 统计Tab -->
+                    <div class="tab-pane" id="tabStats">
+                        <!-- 倒计时卡片 -->
+                        <section class="card countdown-card">
+                            <div class="card-body">
+                                <div class="countdown-display" id="countdownDisplay">
+                                    <div class="countdown-label">距离下一个休息日</div>
+                                    <div class="countdown-value" id="countdownValue">--</div>
+                                    <div class="countdown-days">天</div>
+                                </div>
+                                <div class="countdown-next" id="countdownNext">
+                                    <!-- 动态显示下一个休息日是哪天 -->
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- 统计卡片 -->
+                        <section class="card">
+                            <div class="card-header">
+                                <h2>本月统计</h2>
+                            </div>
+                            <div class="card-body">
+                                <div class="stats-grid" id="statsGrid">
+                                    <div class="stats-empty">生成排班后即可查看统计</div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- 设置Tab -->
+                    <div class="tab-pane" id="tabSettings">
+                        <!-- 重要日期 & 待办 -->
+                        <section class="card">
+                            <div class="card-header">
+                                <h2>重要日期 & 待办</h2>
+                                <button class="btn btn-icon-only" id="addImportantDateBtn" title="添加">+</button>
+                            </div>
+                            <div class="card-body">
+                                <div class="important-dates-list" id="importantDatesList">
+                                    <div class="empty-hint">点击 + 添加生日、纪念日等</div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+
+                <!-- 固定底部操作区 -->
+                <div class="sidebar-footer">
+                    <button class="btn btn-primary btn-full" id="generateBtn">
+                        <span class="btn-icon">✨</span>
+                        生成排班
+                    </button>
+                </div>
             </aside>
 
             <!-- 日历区域 -->
@@ -412,6 +465,39 @@
 
         <!-- Toast 提示 -->
         <div class="toast" id="toast"></div>
+
+        <!-- 悬停预览卡片 -->
+        <div class="day-preview-card" id="dayPreviewCard">
+            <div class="day-preview-header">
+                <span class="day-preview-date" id="previewDate"></span>
+                <span class="day-preview-weekday" id="previewWeekday"></span>
+            </div>
+            <div class="day-preview-lunar" id="previewLunar"></div>
+            <div class="day-preview-shift" id="previewShift"></div>
+            <div class="day-preview-info" id="previewInfo"></div>
+        </div>
+
+        <!-- 移动端底部导航栏 -->
+        <nav class="mobile-bottom-nav">
+            <div class="mobile-bottom-nav-inner">
+                <button class="mobile-nav-item" id="mobileNavToday">
+                    <span class="mobile-nav-icon">📅</span>
+                    <span class="mobile-nav-label">今天</span>
+                </button>
+                <button class="mobile-nav-item" id="mobileNavGenerate">
+                    <span class="mobile-nav-icon">✨</span>
+                    <span class="mobile-nav-label">生成</span>
+                </button>
+                <button class="mobile-nav-item" id="mobileNavHistory">
+                    <span class="mobile-nav-icon">📋</span>
+                    <span class="mobile-nav-label">历史</span>
+                </button>
+                <button class="mobile-nav-item" id="mobileNavExport">
+                    <span class="mobile-nav-icon">📤</span>
+                    <span class="mobile-nav-label">导出</span>
+                </button>
+            </div>
+        </nav>
     </div>
 
     <script src="app.js"></script>

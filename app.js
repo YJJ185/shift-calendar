@@ -793,26 +793,57 @@ function updateStats() {
         }
     }
 
+    // 计算总天数
+    const totalDays = Object.values(stats).reduce((a, b) => a + b, 0);
+
     // 渲染
     container.innerHTML = '';
     let hasData = false;
+
+    // 添加综合进度条
+    const chartBar = document.createElement('div');
+    chartBar.className = 'stats-chart-bar';
+
     state.shiftTypes.forEach(type => {
         const count = stats[type.id] || 0;
         if (count > 0) {
             hasData = true;
+            const percentage = Math.round((count / daysInMonth) * 100);
+
+            // 添加到综合进度条
+            const segment = document.createElement('div');
+            segment.className = 'stats-bar-segment';
+            segment.style.width = `${percentage}%`;
+            segment.style.background = type.color;
+            segment.title = `${type.name}: ${count}天 (${percentage}%)`;
+            chartBar.appendChild(segment);
+
+            // 详细统计项
             const item = document.createElement('div');
             item.className = 'stats-item';
-            item.style.borderLeftColor = type.color;
             item.innerHTML = `
-                <div class="stats-item-left">
-                    <span>${type.icon}</span>
-                    <span>${type.name}</span>
+                <div class="stats-item-header">
+                    <div class="stats-item-left">
+                        <span class="stats-icon">${type.icon}</span>
+                        <span class="stats-name">${type.name}</span>
+                    </div>
+                    <span class="stats-count">${count}天 <span class="stats-percent">${percentage}%</span></span>
                 </div>
-                <span class="stats-count">${count}天</span>
+                <div class="stats-progress">
+                    <div class="stats-progress-bar" style="width: ${percentage}%; background: ${type.color}"></div>
+                </div>
             `;
             container.appendChild(item);
         }
     });
+
+    // 在最前面插入综合进度条
+    if (hasData) {
+        const chartContainer = document.createElement('div');
+        chartContainer.className = 'stats-chart';
+        chartContainer.appendChild(chartBar);
+        container.insertBefore(chartContainer, container.firstChild);
+    }
 
     if (!hasData) {
         container.innerHTML = '<div class="stats-empty">本月没有排班数据</div>';
@@ -836,11 +867,20 @@ function updateCurrentRangeLabel() {
 }
 
 function navigateMonth(delta) {
+    const container = $('#calendarContainer');
+    // 添加动画类
+    container.classList.add(delta > 0 ? 'animate-left' : 'animate-right');
+
     const newDate = new Date(state.currentDate);
     newDate.setMonth(newDate.getMonth() + delta);
     state.currentDate = newDate;
     updateDatePickerValues();
     renderCalendar();
+
+    // 延迟移除动画类
+    setTimeout(() => {
+        container.classList.remove('animate-left', 'animate-right');
+    }, 400);
 }
 
 function setMonthsToShow(months) {
@@ -1379,26 +1419,52 @@ function goToToday() {
 }
 
 // ===== 新功能：主题切换 =====
+const THEMES = [
+    { id: 'dark', name: '深色', icon: '🌙' },
+    { id: 'light', name: '亮色', icon: '☀️' },
+    { id: 'ocean', name: '深海蓝', icon: '🌊' },
+    { id: 'forest', name: '护眼绿', icon: '🌲' },
+    { id: 'sakura', name: '樱花粉', icon: '🌸' }
+];
+
 function initTheme() {
     const savedTheme = localStorage.getItem('shift-calendar-theme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
     updateThemeIcon(savedTheme);
+    updateThemeMenu(savedTheme);
 }
 
 function toggleTheme() {
-    const currentTheme = document.documentElement.getAttribute('data-theme');
-    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-    document.documentElement.setAttribute('data-theme', newTheme);
-    localStorage.setItem('shift-calendar-theme', newTheme);
-    updateThemeIcon(newTheme);
-    showToast(newTheme === 'light' ? '已切换到亮色主题' : '已切换到暗色主题');
+    // 切换主题选择器下拉菜单
+    const selector = $('#themeSelector');
+    selector.classList.toggle('active');
+}
+
+function selectTheme(themeId) {
+    document.documentElement.setAttribute('data-theme', themeId);
+    localStorage.setItem('shift-calendar-theme', themeId);
+    updateThemeIcon(themeId);
+    updateThemeMenu(themeId);
+
+    const theme = THEMES.find(t => t.id === themeId);
+    showToast(`已切换到${theme?.name || themeId}主题`);
+
+    // 关闭下拉菜单
+    $('#themeSelector').classList.remove('active');
 }
 
 function updateThemeIcon(theme) {
     const icon = $('#themeIcon');
-    if (icon) {
-        icon.textContent = theme === 'light' ? '☀️' : '🌙';
+    const themeInfo = THEMES.find(t => t.id === theme);
+    if (icon && themeInfo) {
+        icon.textContent = themeInfo.icon;
     }
+}
+
+function updateThemeMenu(currentTheme) {
+    $$('.theme-option').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.theme === currentTheme);
+    });
 }
 
 // ===== 新功能：倒计时 =====
@@ -1796,9 +1862,274 @@ function initNewFeatures() {
 
     // 更新倒计时
     updateCountdown();
+
+    // 主题选择器事件
+    $$('.theme-option').forEach(btn => {
+        btn.addEventListener('click', () => selectTheme(btn.dataset.theme));
+    });
+
+    // 点击其他地方关闭主题选择器
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#themeSelector')) {
+            $('#themeSelector')?.classList.remove('active');
+        }
+    });
+
+    // 按钮涟漪效果
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn');
+        if (btn) {
+            const ripple = document.createElement('span');
+            ripple.className = 'ripple';
+            const rect = btn.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            ripple.style.width = ripple.style.height = size + 'px';
+            ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+            ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+            btn.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 600);
+        }
+    });
+
+    // 悬停预览卡片（仅桌面端）
+    if (window.innerWidth > 768) {
+        initDayHoverPreview();
+    }
+
+    // 移动端底部导航
+    $('#mobileNavToday')?.addEventListener('click', () => {
+        goToToday();
+        showToast('已跳转到今天');
+    });
+    $('#mobileNavGenerate')?.addEventListener('click', () => {
+        // 滚动到生成按钮区域
+        $('#generateBtn')?.scrollIntoView({ behavior: 'smooth' });
+    });
+    $('#mobileNavHistory')?.addEventListener('click', openHistoryModal);
+    $('#mobileNavExport')?.addEventListener('click', () => {
+        toggleExportDropdown();
+    });
+
+    // 侧边栏Tab切换
+    initSidebarTabs();
+}
+
+// 侧边栏Tab切换功能
+function initSidebarTabs() {
+    const tabs = $$('.sidebar-tab');
+    const panes = {
+        'schedule': $('#tabSchedule'),
+        'stats': $('#tabStats'),
+        'settings': $('#tabSettings')
+    };
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // 移除所有active状态
+            tabs.forEach(t => t.classList.remove('active'));
+            Object.values(panes).forEach(p => p?.classList.remove('active'));
+
+            // 激活当前Tab
+            tab.classList.add('active');
+            const targetPane = panes[tab.dataset.tab];
+            if (targetPane) {
+                targetPane.classList.add('active');
+            }
+        });
+    });
+
+    // 可折叠卡片
+    $$('.collapsible .collapsible-header').forEach(header => {
+        header.addEventListener('click', (e) => {
+            // 如果点击的是+按钮，不触发折叠
+            if (e.target.closest('.btn')) return;
+
+            const card = header.closest('.collapsible');
+            card.classList.toggle('collapsed');
+        });
+    });
+}
+
+// 悬停预览卡片功能
+function initDayHoverPreview() {
+    const previewCard = $('#dayPreviewCard');
+    if (!previewCard) return;
+
+    const calendarContainer = $('#calendarContainer');
+
+    calendarContainer.addEventListener('mouseenter', (e) => {
+        const dayEl = e.target.closest('.calendar-day:not(.empty)');
+        if (!dayEl) return;
+
+        showDayPreview(dayEl, e);
+    }, true);
+
+    calendarContainer.addEventListener('mouseleave', (e) => {
+        const dayEl = e.target.closest('.calendar-day:not(.empty)');
+        if (!dayEl) return;
+
+        previewCard.classList.remove('visible');
+    }, true);
+
+    calendarContainer.addEventListener('mousemove', (e) => {
+        const dayEl = e.target.closest('.calendar-day:not(.empty)');
+        if (dayEl && previewCard.classList.contains('visible')) {
+            positionPreviewCard(e);
+        }
+    });
+}
+
+function showDayPreview(dayEl, e) {
+    const previewCard = $('#dayPreviewCard');
+    const dateStr = dayEl.dataset.date;
+    if (!dateStr) return;
+
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+
+    // 检查是否有有意义的额外信息
+    const hasNote = state.dayNotes && state.dayNotes[dateStr];
+    const hasTodo = state.todos && state.todos[dateStr];
+    const lunarInfo = getLunarDay(date);
+    const isHoliday = lunarInfo && (lunarInfo.includes('节') || lunarInfo.includes('除夕') || lunarInfo.includes('元旦'));
+
+    // 只有在有备注、待办或节假日时才显示预览
+    if (!hasNote && !hasTodo && !isHoliday) {
+        return; // 没有额外信息，不显示预览
+    }
+
+    const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
+    // 填充预览信息
+    $('#previewDate').textContent = `${month}月${day}日`;
+    $('#previewWeekday').textContent = weekdays[date.getDay()];
+    $('#previewLunar').textContent = lunarInfo;
+
+    // 获取班次信息
+    const schedule = state.schedules.find(s => s.id === state.activeScheduleId);
+    if (schedule) {
+        const shift = getShiftForDate(schedule, date);
+        if (shift) {
+            $('#previewShift').innerHTML = `
+                <span class="day-preview-shift-icon">${shift.icon}</span>
+                <span class="day-preview-shift-name" style="color: ${shift.color}">${shift.name}</span>
+            `;
+            $('#previewShift').style.background = shift.color + '20';
+        } else {
+            $('#previewShift').innerHTML = '<span style="color: var(--text-muted)">无排班</span>';
+            $('#previewShift').style.background = 'transparent';
+        }
+    }
+
+    // 备注和待办
+    let infoHtml = '';
+    if (hasNote) {
+        infoHtml += `<div class="day-preview-note">📝 ${state.dayNotes[dateStr]}</div>`;
+    }
+    if (hasTodo) {
+        infoHtml += `<div class="day-preview-note">✅ ${state.todos[dateStr]}</div>`;
+    }
+    if (isHoliday) {
+        infoHtml += `<div class="day-preview-note">🎉 ${lunarInfo}</div>`;
+    }
+    $('#previewInfo').innerHTML = infoHtml;
+
+    positionPreviewCard(e);
+    previewCard.classList.add('visible');
+}
+
+function positionPreviewCard(e) {
+    const previewCard = $('#dayPreviewCard');
+    const padding = 15;
+    let x = e.clientX + padding;
+    let y = e.clientY + padding;
+
+    // 防止超出屏幕
+    const cardRect = previewCard.getBoundingClientRect();
+    if (x + cardRect.width > window.innerWidth) {
+        x = e.clientX - cardRect.width - padding;
+    }
+    if (y + cardRect.height > window.innerHeight) {
+        y = e.clientY - cardRect.height - padding;
+    }
+
+    previewCard.style.left = x + 'px';
+    previewCard.style.top = y + 'px';
+}
+
+// ===== 键盘快捷键 =====
+function initKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+        // 如果正在输入框中，不处理快捷键
+        const activeEl = document.activeElement;
+        if (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT') {
+            return;
+        }
+
+        // 如果有弹窗打开，Esc关闭
+        if (e.key === 'Escape') {
+            const modals = $$('.modal.active');
+            if (modals.length > 0) {
+                modals.forEach(m => m.classList.remove('active'));
+                e.preventDefault();
+                return;
+            }
+            // 关闭主题选择器和导出菜单
+            $('#themeSelector')?.classList.remove('active');
+            closeExportDropdown();
+            return;
+        }
+
+        // 有弹窗时不处理其他快捷键
+        if ($$('.modal.active').length > 0) return;
+
+        switch (e.key) {
+            case 'ArrowLeft':
+                navigateMonth(-1);
+                showToast('← 上一月');
+                e.preventDefault();
+                break;
+            case 'ArrowRight':
+                navigateMonth(1);
+                showToast('→ 下一月');
+                e.preventDefault();
+                break;
+            case 't':
+            case 'T':
+                goToToday();
+                showToast('已跳转到今天');
+                e.preventDefault();
+                break;
+            case 'h':
+            case 'H':
+                openHistoryModal();
+                e.preventDefault();
+                break;
+            case '1':
+                setMonthsToShow(1);
+                showToast('显示 1 个月');
+                break;
+            case '3':
+                setMonthsToShow(3);
+                showToast('显示 3 个月');
+                break;
+            case '6':
+                setMonthsToShow(6);
+                showToast('显示 6 个月');
+                break;
+            case '?':
+                showKeyboardHelp();
+                break;
+        }
+    });
+}
+
+function showKeyboardHelp() {
+    showToast('快捷键: ← → 切换月 | T 今天 | H 历史 | 1/3/6 月数 | Esc 关闭', 'success');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     init();
     initNewFeatures();
+    initKeyboardShortcuts();
 });
