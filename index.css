@@ -2467,22 +2467,26 @@ body {
         min-height: 100vh;
     }
 
-    /* 移动端header优化 - 保持紧凑单行 */
+    /* 移动端header优化 - 强制紧凑单行 */
     .header {
-        padding: 6px 12px;
-        flex-wrap: nowrap;
+        padding: 4px 8px !important;
+        flex-wrap: nowrap !important;
+        gap: 4px;
     }
 
     .header-left {
-        flex-shrink: 0;
+        flex-shrink: 1;
+        min-width: 0;
+        overflow: hidden;
     }
 
     .header h1 {
-        font-size: 15px;
+        font-size: 14px !important;
+        white-space: nowrap;
     }
 
     .logo {
-        font-size: 18px;
+        font-size: 16px !important;
     }
 
     .header-right {
@@ -2491,9 +2495,9 @@ body {
     }
 
     .btn-icon-only {
-        width: 30px;
-        height: 30px;
-        font-size: 14px;
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 14px !important;
     }
 
     /* 移动端隐藏桌面版导出和历史按钮 */
