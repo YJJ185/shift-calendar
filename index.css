@@ -1713,13 +1713,29 @@ body {
     }
 
     .calendar-nav {
-        justify-content: center;
-        flex-wrap: wrap;
+        justify-content: space-between;
+        flex-wrap: nowrap;
+        width: 100%;
+        gap: var(--space-xs);
     }
 
     .date-picker {
-        flex-wrap: wrap;
+        flex: 1;
+        flex-wrap: nowrap;
         justify-content: center;
+        gap: var(--space-xs);
+    }
+
+    .date-select {
+        width: auto;
+        min-width: 60px;
+        padding: var(--space-sm);
+        font-size: 14px;
+    }
+
+    /* 移动端隐藏顶部"今天"按钮 */
+    .btn-today {
+        display: none;
     }
 
     /* 日历格子 - 更紧凑但保持可读 */
