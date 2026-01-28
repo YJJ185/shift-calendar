@@ -2461,6 +2461,7 @@ body {
 
     .app-container {
         padding-bottom: 70px;
+        min-height: 100vh;
     }
 
     /* 移动端隐藏桌面版导出按钮 */
@@ -2489,7 +2490,6 @@ body {
         border-right: 1px solid var(--border-color);
         box-shadow: var(--shadow-lg);
         background: var(--bg-card);
-        /* 确保有背景色 */
     }
 
     .sidebar.mobile-open {
@@ -2498,7 +2498,6 @@ body {
 
     .sidebar .card {
         min-width: 0;
-        /* 修复 flex 子项溢出 */
         border-radius: 0;
         border: none;
         border-bottom: 1px solid var(--border-color);
@@ -2526,13 +2525,59 @@ body {
         opacity: 1;
     }
 
-    /* 移动端主内容区 */
+    /* 移动端主内容区 - 确保日历直接显示 */
     .main-content {
+        display: block;
         padding: var(--space-sm);
+        padding-top: 0;
     }
 
     .calendar-section {
         width: 100%;
+        min-height: calc(100vh - 140px);
+    }
+
+    /* 移动端日历控制栏优化 */
+    .calendar-controls {
+        flex-direction: column;
+        gap: var(--space-sm);
+        padding: var(--space-sm);
+    }
+
+    .range-selector {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .range-selector .label {
+        display: none;
+    }
+
+    .calendar-nav {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* 移动端日历格子优化 */
+    .calendar-grid {
+        gap: 2px;
+    }
+
+    .calendar-day {
+        min-height: 48px;
+        padding: 2px;
+    }
+
+    .day-number {
+        font-size: 14px;
+    }
+
+    .day-lunar {
+        font-size: 9px;
+    }
+
+    .day-shift {
+        font-size: 10px;
     }
 }
 

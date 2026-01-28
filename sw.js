@@ -1,5 +1,5 @@
 // Service Worker for PWA - 离线缓存支持
-const CACHE_NAME = 'shift-calendar-v7';
+const CACHE_NAME = 'shift-calendar-v8';
 const urlsToCache = [
     './',
     './index.html',

@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-title" content="排班日历">
     <link rel="apple-touch-icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗓️</text></svg>">
-    <link rel="stylesheet" href="index.css?v=7">
+    <link rel="stylesheet" href="index.css?v=8">
 </head>
 
 <body>
@@ -211,7 +211,7 @@
 
                     <div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 12px;">
                         <p>当前版本: v2.0.0 (Latest)</p>
-                        <p id="buildTime">Build: 2026-01-28 18:30</p>
+                        <p id="buildTime">Build: 2026-01-28 18:37</p>
                     </div>
                 </div>
     </div>
@@ -508,13 +508,13 @@
     </nav>
     </div>
 
-    <script src="app.js?v=7"></script>
+    <script src="app.js?v=8"></script>
     <script>
         // 注册 Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 // 添加版本号 query param 以强制更新
-                navigator.serviceWorker.register('./sw.js?v=6')
+                navigator.serviceWorker.register('./sw.js?v=7')
                     .then(reg => {
                         console.log('Service Worker 注册成功');
                         // 发现更新时强制刷新

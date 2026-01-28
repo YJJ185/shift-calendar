@@ -1926,7 +1926,21 @@ function initNewFeatures() {
         showToast('已跳转到今天');
     });
     $('#mobileNavGenerate')?.addEventListener('click', () => {
-        toggleMobileSidebar();
+        // 检查是否已有可生成的排班规律
+        const schedule = state.schedules.find(s => s.id === state.activeScheduleId);
+        if (schedule && schedule.pattern && schedule.pattern.length > 0) {
+            // 已有规律，直接生成
+            generateSchedule();
+            showToast('排班已生成！');
+        } else if (state.pattern && state.pattern.length > 0) {
+            // 正在编辑规律，直接生成
+            generateSchedule();
+            showToast('排班已生成！');
+        } else {
+            // 没有规律，打开侧边栏让用户设置
+            toggleMobileSidebar();
+            showToast('请先设置排班规律');
+        }
     });
     $('#mobileNavHistory')?.addEventListener('click', () => {
         closeMobileSidebar();
