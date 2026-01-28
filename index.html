@@ -208,298 +208,304 @@
                             </div>
                         </section>
                     </div>
-                </div>
 
-                <!-- 固定底部操作区 -->
-                <div class="sidebar-footer">
-                    <button class="btn btn-primary btn-full" id="generateBtn">
-                        <span class="btn-icon">✨</span>
-                        生成排班
-                    </button>
-                </div>
-            </aside>
-
-            <!-- 日历区域 -->
-            <section class="calendar-section">
-                <!-- 日历控制栏 -->
-                <div class="calendar-controls">
-                    <div class="range-selector">
-                        <span class="label">显示范围：</span>
-                        <div class="btn-group" id="rangeSelector">
-                            <button class="btn btn-range active" data-months="1">1个月</button>
-                            <button class="btn btn-range" data-months="3">3个月</button>
-                            <button class="btn btn-range" data-months="6">6个月</button>
-                            <button class="btn btn-range" data-months="12">1年</button>
-                        </div>
-                    </div>
-                    <div class="calendar-nav">
-                        <button class="btn btn-nav" id="prevBtn">◀</button>
-                        <div class="date-picker">
-                            <select id="yearSelect" class="form-select date-select">
-                                <!-- 动态生成年份选项 -->
-                            </select>
-                            <span class="date-separator">年</span>
-                            <select id="monthSelect" class="form-select date-select">
-                                <option value="0">1月</option>
-                                <option value="1">2月</option>
-                                <option value="2">3月</option>
-                                <option value="3">4月</option>
-                                <option value="4">5月</option>
-                                <option value="5">6月</option>
-                                <option value="6">7月</option>
-                                <option value="7">8月</option>
-                                <option value="8">9月</option>
-                                <option value="9">10月</option>
-                                <option value="10">11月</option>
-                                <option value="11">12月</option>
-                            </select>
-                            <button class="btn btn-secondary btn-today" id="todayBtn">今天</button>
-                        </div>
-                        <button class="btn btn-nav" id="nextBtn">▶</button>
+                    <div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 12px;">
+                        <p>当前版本: v2.0.0 (Latest)</p>
+                        <p id="buildTime">Build: 2026-01-28 18:30</p>
                     </div>
                 </div>
+    </div>
 
-                <!-- 日历容器 -->
-                <div class="calendar-container" id="calendarContainer">
-                    <div class="empty-state" id="emptyState">
-                        <div class="empty-icon">📅</div>
-                        <h3>还没有排班</h3>
-                        <p>在左侧设置你的班次类型和排班规律，然后点击"生成排班"</p>
-                    </div>
-                </div>
-            </section>
-        </main>
+    <!-- 固定底部操作区 -->
+    <div class="sidebar-footer">
+        <button class="btn btn-primary btn-full" id="generateBtn">
+            <span class="btn-icon">✨</span>
+            生成排班
+        </button>
+    </div>
+    </aside>
 
-        <!-- 历史记录弹窗 -->
-        <div class="modal" id="historyModal">
-            <div class="modal-overlay"></div>
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>历史排班记录</h2>
-                    <button class="btn btn-icon-only modal-close" id="closeHistoryBtn">×</button>
+    <!-- 日历区域 -->
+    <section class="calendar-section">
+        <!-- 日历控制栏 -->
+        <div class="calendar-controls">
+            <div class="range-selector">
+                <span class="label">显示范围：</span>
+                <div class="btn-group" id="rangeSelector">
+                    <button class="btn btn-range active" data-months="1">1个月</button>
+                    <button class="btn btn-range" data-months="3">3个月</button>
+                    <button class="btn btn-range" data-months="6">6个月</button>
+                    <button class="btn btn-range" data-months="12">1年</button>
                 </div>
-                <div class="modal-body">
-                    <div class="history-list" id="historyList">
-                        <!-- 动态生成 -->
-                    </div>
+            </div>
+            <div class="calendar-nav">
+                <button class="btn btn-nav" id="prevBtn">◀</button>
+                <div class="date-picker">
+                    <select id="yearSelect" class="form-select date-select">
+                        <!-- 动态生成年份选项 -->
+                    </select>
+                    <span class="date-separator">年</span>
+                    <select id="monthSelect" class="form-select date-select">
+                        <option value="0">1月</option>
+                        <option value="1">2月</option>
+                        <option value="2">3月</option>
+                        <option value="3">4月</option>
+                        <option value="4">5月</option>
+                        <option value="5">6月</option>
+                        <option value="6">7月</option>
+                        <option value="7">8月</option>
+                        <option value="8">9月</option>
+                        <option value="9">10月</option>
+                        <option value="10">11月</option>
+                        <option value="11">12月</option>
+                    </select>
+                    <button class="btn btn-secondary btn-today" id="todayBtn">今天</button>
                 </div>
+                <button class="btn btn-nav" id="nextBtn">▶</button>
             </div>
         </div>
 
-        <!-- 班次类型编辑弹窗 -->
-        <div class="modal" id="shiftTypeModal">
-            <div class="modal-overlay"></div>
-            <div class="modal-content modal-small">
-                <div class="modal-header">
-                    <h2 id="shiftTypeModalTitle">添加班次类型</h2>
-                    <button class="btn btn-icon-only modal-close" id="closeShiftTypeBtn">×</button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="shiftTypeName">班次名称</label>
-                        <input type="text" id="shiftTypeName" class="form-input" placeholder="例如：白班">
-                    </div>
-                    <div class="form-group">
-                        <label for="shiftTypeIcon">图标</label>
-                        <input type="text" id="shiftTypeIcon" class="form-input" placeholder="例如：☀️">
-                        <div class="icon-suggestions">
-                            <span class="icon-btn" data-icon="☀️">☀️</span>
-                            <span class="icon-btn" data-icon="🌙">🌙</span>
-                            <span class="icon-btn" data-icon="🌅">🌅</span>
-                            <span class="icon-btn" data-icon="🏠">🏠</span>
-                            <span class="icon-btn" data-icon="💼">💼</span>
-                            <span class="icon-btn" data-icon="🌃">🌃</span>
-                            <span class="icon-btn" data-icon="⭐">⭐</span>
-                            <span class="icon-btn" data-icon="🔄">🔄</span>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="shiftTypeColor">颜色</label>
-                        <div class="color-picker-wrap">
-                            <input type="color" id="shiftTypeColor" class="form-color" value="#FFB74D">
-                            <span class="color-value" id="colorValue">#FFB74D</span>
-                        </div>
-                        <div class="color-suggestions">
-                            <span class="color-btn" data-color="#FFB74D" style="background:#FFB74D"></span>
-                            <span class="color-btn" data-color="#7986CB" style="background:#7986CB"></span>
-                            <span class="color-btn" data-color="#81C784" style="background:#81C784"></span>
-                            <span class="color-btn" data-color="#FF8A65" style="background:#FF8A65"></span>
-                            <span class="color-btn" data-color="#4FC3F7" style="background:#4FC3F7"></span>
-                            <span class="color-btn" data-color="#BA68C8" style="background:#BA68C8"></span>
-                            <span class="color-btn" data-color="#F06292" style="background:#F06292"></span>
-                            <span class="color-btn" data-color="#90A4AE" style="background:#90A4AE"></span>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" id="deleteShiftTypeBtn">删除</button>
-                    <button class="btn btn-primary" id="saveShiftTypeBtn">保存</button>
+        <!-- 日历容器 -->
+        <div class="calendar-container" id="calendarContainer">
+            <div class="empty-state" id="emptyState">
+                <div class="empty-icon">📅</div>
+                <h3>还没有排班</h3>
+                <p>在左侧设置你的班次类型和排班规律，然后点击"生成排班"</p>
+            </div>
+        </div>
+    </section>
+    </main>
+
+    <!-- 历史记录弹窗 -->
+    <div class="modal" id="historyModal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>历史排班记录</h2>
+                <button class="btn btn-icon-only modal-close" id="closeHistoryBtn">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="history-list" id="historyList">
+                    <!-- 动态生成 -->
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- 编辑班次弹窗 -->
-        <div class="modal" id="editShiftModal">
-            <div class="modal-overlay"></div>
-            <div class="modal-content modal-small">
-                <div class="modal-header">
-                    <h2 id="editShiftTitle">编辑班次</h2>
-                    <button class="btn btn-icon-only modal-close" id="closeEditShiftBtn">×</button>
+    <!-- 班次类型编辑弹窗 -->
+    <div class="modal" id="shiftTypeModal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2 id="shiftTypeModalTitle">添加班次类型</h2>
+                <button class="btn btn-icon-only modal-close" id="closeShiftTypeBtn">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="shiftTypeName">班次名称</label>
+                    <input type="text" id="shiftTypeName" class="form-input" placeholder="例如：白班">
                 </div>
-                <div class="modal-body">
-                    <p class="modal-subtitle" id="editShiftDate">2026-01-01</p>
-                    <div class="shift-selection-grid" id="editShiftGrid">
-                        <!-- 动态生成可选班次 -->
+                <div class="form-group">
+                    <label for="shiftTypeIcon">图标</label>
+                    <input type="text" id="shiftTypeIcon" class="form-input" placeholder="例如：☀️">
+                    <div class="icon-suggestions">
+                        <span class="icon-btn" data-icon="☀️">☀️</span>
+                        <span class="icon-btn" data-icon="🌙">🌙</span>
+                        <span class="icon-btn" data-icon="🌅">🌅</span>
+                        <span class="icon-btn" data-icon="🏠">🏠</span>
+                        <span class="icon-btn" data-icon="💼">💼</span>
+                        <span class="icon-btn" data-icon="🌃">🌃</span>
+                        <span class="icon-btn" data-icon="⭐">⭐</span>
+                        <span class="icon-btn" data-icon="🔄">🔄</span>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" id="resetShiftBtn">恢复默认</button>
+                <div class="form-group">
+                    <label for="shiftTypeColor">颜色</label>
+                    <div class="color-picker-wrap">
+                        <input type="color" id="shiftTypeColor" class="form-color" value="#FFB74D">
+                        <span class="color-value" id="colorValue">#FFB74D</span>
+                    </div>
+                    <div class="color-suggestions">
+                        <span class="color-btn" data-color="#FFB74D" style="background:#FFB74D"></span>
+                        <span class="color-btn" data-color="#7986CB" style="background:#7986CB"></span>
+                        <span class="color-btn" data-color="#81C784" style="background:#81C784"></span>
+                        <span class="color-btn" data-color="#FF8A65" style="background:#FF8A65"></span>
+                        <span class="color-btn" data-color="#4FC3F7" style="background:#4FC3F7"></span>
+                        <span class="color-btn" data-color="#BA68C8" style="background:#BA68C8"></span>
+                        <span class="color-btn" data-color="#F06292" style="background:#F06292"></span>
+                        <span class="color-btn" data-color="#90A4AE" style="background:#90A4AE"></span>
+                    </div>
                 </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="deleteShiftTypeBtn">删除</button>
+                <button class="btn btn-primary" id="saveShiftTypeBtn">保存</button>
             </div>
         </div>
+    </div>
 
-        <!-- 确认删除对话框 -->
-        <div class="modal" id="confirmModal">
-            <div class="modal-overlay"></div>
-            <div class="modal-content modal-small">
-                <div class="modal-header">
-                    <h2>确认删除</h2>
-                    <button class="btn btn-icon-only modal-close" id="closeConfirmBtn">×</button>
+    <!-- 编辑班次弹窗 -->
+    <div class="modal" id="editShiftModal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2 id="editShiftTitle">编辑班次</h2>
+                <button class="btn btn-icon-only modal-close" id="closeEditShiftBtn">×</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-subtitle" id="editShiftDate">2026-01-01</p>
+                <div class="shift-selection-grid" id="editShiftGrid">
+                    <!-- 动态生成可选班次 -->
                 </div>
-                <div class="modal-body">
-                    <p id="confirmMessage">确定要删除这个方案吗？</p>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" id="confirmCancelBtn">取消</button>
-                    <button class="btn btn-danger" id="confirmOkBtn">删除</button>
-                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="resetShiftBtn">恢复默认</button>
             </div>
         </div>
+    </div>
 
-        <!-- 日期编辑弹窗（调班/备注） -->
-        <div class="modal" id="dayEditModal">
-            <div class="modal-overlay"></div>
-            <div class="modal-content modal-small">
-                <div class="modal-header">
-                    <h2 id="dayEditTitle">编辑日期</h2>
-                    <button class="btn btn-icon-only modal-close" id="closeDayEditBtn">×</button>
-                </div>
-                <div class="modal-body">
-                    <div class="day-edit-date" id="dayEditDate">
-                        <!-- 显示日期信息 -->
-                    </div>
-                    <div class="form-group">
-                        <label>选择班次</label>
-                        <div class="day-edit-shifts" id="dayEditShifts">
-                            <!-- 动态生成班次选项 -->
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="dayNote">备注</label>
-                        <input type="text" id="dayNote" class="form-input" placeholder="添加备注（可选）">
-                    </div>
-                    <div class="form-group">
-                        <label for="dayTodo">待办事项</label>
-                        <input type="text" id="dayTodo" class="form-input" placeholder="添加待办事项（可选）">
-                    </div>
-                    <div class="day-edit-info">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="dayEditOverride">
-                            <span>临时调班（仅修改这一天，不影响排班规律）</span>
-                        </label>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-text" id="clearDayOverrideBtn">恢复默认</button>
-                    <button class="btn btn-primary" id="saveDayEditBtn">保存</button>
-                </div>
+    <!-- 确认删除对话框 -->
+    <div class="modal" id="confirmModal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>确认删除</h2>
+                <button class="btn btn-icon-only modal-close" id="closeConfirmBtn">×</button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMessage">确定要删除这个方案吗？</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="confirmCancelBtn">取消</button>
+                <button class="btn btn-danger" id="confirmOkBtn">删除</button>
             </div>
         </div>
+    </div>
 
-        <!-- 重要日期弹窗 -->
-        <div class="modal" id="importantDateModal">
-            <div class="modal-overlay"></div>
-            <div class="modal-content modal-small">
-                <div class="modal-header">
-                    <h2 id="importantDateModalTitle">添加重要日期</h2>
-                    <button class="btn btn-icon-only modal-close" id="closeImportantDateBtn">×</button>
+    <!-- 日期编辑弹窗（调班/备注） -->
+    <div class="modal" id="dayEditModal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2 id="dayEditTitle">编辑日期</h2>
+                <button class="btn btn-icon-only modal-close" id="closeDayEditBtn">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="day-edit-date" id="dayEditDate">
+                    <!-- 显示日期信息 -->
                 </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="importantDateDate">日期</label>
-                        <input type="date" id="importantDateDate" class="form-input">
-                    </div>
-                    <div class="form-group">
-                        <label for="importantDateName">名称</label>
-                        <input type="text" id="importantDateName" class="form-input" placeholder="例如：妈妈生日">
-                    </div>
-                    <div class="form-group">
-                        <label for="importantDateIcon">图标</label>
-                        <div class="icon-suggestions">
-                            <span class="icon-btn" data-icon="🎂">🎂</span>
-                            <span class="icon-btn" data-icon="💕">💕</span>
-                            <span class="icon-btn" data-icon="🎉">🎉</span>
-                            <span class="icon-btn" data-icon="💍">💍</span>
-                            <span class="icon-btn" data-icon="🎁">🎁</span>
-                            <span class="icon-btn" data-icon="📅">📅</span>
-                            <span class="icon-btn" data-icon="⭐">⭐</span>
-                            <span class="icon-btn" data-icon="❤️">❤️</span>
-                        </div>
-                        <input type="text" id="importantDateIcon" class="form-input" value="🎂"
-                            style="width: 60px; text-align: center; margin-top: 8px;">
-                    </div>
-                    <div class="form-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="importantDateRepeat" checked>
-                            <span>每年重复</span>
-                        </label>
+                <div class="form-group">
+                    <label>选择班次</label>
+                    <div class="day-edit-shifts" id="dayEditShifts">
+                        <!-- 动态生成班次选项 -->
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" id="deleteImportantDateBtn" style="display: none;">删除</button>
-                    <button class="btn btn-primary" id="saveImportantDateBtn">保存</button>
+                <div class="form-group">
+                    <label for="dayNote">备注</label>
+                    <input type="text" id="dayNote" class="form-input" placeholder="添加备注（可选）">
                 </div>
+                <div class="form-group">
+                    <label for="dayTodo">待办事项</label>
+                    <input type="text" id="dayTodo" class="form-input" placeholder="添加待办事项（可选）">
+                </div>
+                <div class="day-edit-info">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="dayEditOverride">
+                        <span>临时调班（仅修改这一天，不影响排班规律）</span>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-text" id="clearDayOverrideBtn">恢复默认</button>
+                <button class="btn btn-primary" id="saveDayEditBtn">保存</button>
             </div>
         </div>
+    </div>
 
-        <!-- 隐藏的文件导入input -->
-        <input type="file" id="importFileInput" accept=".json" style="display: none;">
-
-        <!-- Toast 提示 -->
-        <div class="toast" id="toast"></div>
-
-        <!-- 悬停预览卡片 -->
-        <div class="day-preview-card" id="dayPreviewCard">
-            <div class="day-preview-header">
-                <span class="day-preview-date" id="previewDate"></span>
-                <span class="day-preview-weekday" id="previewWeekday"></span>
+    <!-- 重要日期弹窗 -->
+    <div class="modal" id="importantDateModal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2 id="importantDateModalTitle">添加重要日期</h2>
+                <button class="btn btn-icon-only modal-close" id="closeImportantDateBtn">×</button>
             </div>
-            <div class="day-preview-lunar" id="previewLunar"></div>
-            <div class="day-preview-shift" id="previewShift"></div>
-            <div class="day-preview-info" id="previewInfo"></div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="importantDateDate">日期</label>
+                    <input type="date" id="importantDateDate" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label for="importantDateName">名称</label>
+                    <input type="text" id="importantDateName" class="form-input" placeholder="例如：妈妈生日">
+                </div>
+                <div class="form-group">
+                    <label for="importantDateIcon">图标</label>
+                    <div class="icon-suggestions">
+                        <span class="icon-btn" data-icon="🎂">🎂</span>
+                        <span class="icon-btn" data-icon="💕">💕</span>
+                        <span class="icon-btn" data-icon="🎉">🎉</span>
+                        <span class="icon-btn" data-icon="💍">💍</span>
+                        <span class="icon-btn" data-icon="🎁">🎁</span>
+                        <span class="icon-btn" data-icon="📅">📅</span>
+                        <span class="icon-btn" data-icon="⭐">⭐</span>
+                        <span class="icon-btn" data-icon="❤️">❤️</span>
+                    </div>
+                    <input type="text" id="importantDateIcon" class="form-input" value="🎂"
+                        style="width: 60px; text-align: center; margin-top: 8px;">
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="importantDateRepeat" checked>
+                        <span>每年重复</span>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="deleteImportantDateBtn" style="display: none;">删除</button>
+                <button class="btn btn-primary" id="saveImportantDateBtn">保存</button>
+            </div>
         </div>
+    </div>
 
-        <!-- 移动端底部导航栏 -->
-        <nav class="mobile-bottom-nav">
-            <div class="mobile-bottom-nav-inner">
-                <button class="mobile-nav-item" id="mobileNavToday">
-                    <span class="mobile-nav-icon">📅</span>
-                    <span class="mobile-nav-label">今天</span>
-                </button>
-                <button class="mobile-nav-item" id="mobileNavGenerate">
-                    <span class="mobile-nav-icon">✨</span>
-                    <span class="mobile-nav-label">生成</span>
-                </button>
-                <button class="mobile-nav-item" id="mobileNavHistory">
-                    <span class="mobile-nav-icon">📋</span>
-                    <span class="mobile-nav-label">历史</span>
-                </button>
-                <button class="mobile-nav-item" id="mobileNavExport">
-                    <span class="mobile-nav-icon">📤</span>
-                    <span class="mobile-nav-label">导出</span>
-                </button>
-            </div>
-        </nav>
+    <!-- 隐藏的文件导入input -->
+    <input type="file" id="importFileInput" accept=".json" style="display: none;">
+
+    <!-- Toast 提示 -->
+    <div class="toast" id="toast"></div>
+
+    <!-- 悬停预览卡片 -->
+    <div class="day-preview-card" id="dayPreviewCard">
+        <div class="day-preview-header">
+            <span class="day-preview-date" id="previewDate"></span>
+            <span class="day-preview-weekday" id="previewWeekday"></span>
+        </div>
+        <div class="day-preview-lunar" id="previewLunar"></div>
+        <div class="day-preview-shift" id="previewShift"></div>
+        <div class="day-preview-info" id="previewInfo"></div>
+    </div>
+
+    <!-- 移动端底部导航栏 -->
+    <nav class="mobile-bottom-nav">
+        <div class="mobile-bottom-nav-inner">
+            <button class="mobile-nav-item" id="mobileNavToday">
+                <span class="mobile-nav-icon">📅</span>
+                <span class="mobile-nav-label">今天</span>
+            </button>
+            <button class="mobile-nav-item" id="mobileNavGenerate">
+                <span class="mobile-nav-icon">✨</span>
+                <span class="mobile-nav-label">生成</span>
+            </button>
+            <button class="mobile-nav-item" id="mobileNavHistory">
+                <span class="mobile-nav-icon">📋</span>
+                <span class="mobile-nav-label">历史</span>
+            </button>
+            <button class="mobile-nav-item" id="mobileNavExport">
+                <span class="mobile-nav-icon">📤</span>
+                <span class="mobile-nav-label">导出</span>
+            </button>
+        </div>
+    </nav>
     </div>
 
     <script src="app.js"></script>
@@ -507,8 +513,26 @@
         // 注册 Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('Service Worker 注册成功'))
+                // 添加版本号 query param 以强制更新
+                navigator.serviceWorker.register('./sw.js?v=6')
+                    .then(reg => {
+                        console.log('Service Worker 注册成功');
+                        // 发现更新时强制刷新
+                        reg.onupdatefound = () => {
+                            const installingWorker = reg.installing;
+                            installingWorker.onstatechange = () => {
+                                if (installingWorker.state === 'installed') {
+                                    if (navigator.serviceWorker.controller) {
+                                        // 新内容可用，提示用户
+                                        console.log('New content is available; please refresh.');
+                                        if (confirm('发现新版本，是否立即刷新更新？')) {
+                                            window.location.reload();
+                                        }
+                                    }
+                                }
+                            };
+                        };
+                    })
                     .catch(err => console.log('Service Worker 注册失败:', err));
             });
         }
