@@ -1926,21 +1926,21 @@ function initNewFeatures() {
         showToast('已跳转到今天');
     });
     $('#mobileNavGenerate')?.addEventListener('click', () => {
-        // 检查是否已有可生成的排班规律
-        const schedule = state.schedules.find(s => s.id === state.activeScheduleId);
-        if (schedule && schedule.pattern && schedule.pattern.length > 0) {
-            // 已有规律，直接生成
-            generateSchedule();
-            showToast('排班已生成！');
-        } else if (state.pattern && state.pattern.length > 0) {
-            // 正在编辑规律，直接生成
-            generateSchedule();
-            showToast('排班已生成！');
-        } else {
-            // 没有规律，打开侧边栏让用户设置
-            toggleMobileSidebar();
-            showToast('请先设置排班规律');
-        }
+        // 打开侧边栏并切换到排班Tab
+        toggleMobileSidebar();
+        // 确保显示排班Tab
+        const tabs = $$('.sidebar-tab');
+        const panes = {
+            'schedule': $('#tabSchedule'),
+            'stats': $('#tabStats'),
+            'settings': $('#tabSettings')
+        };
+        tabs.forEach(t => t.classList.remove('active'));
+        Object.values(panes).forEach(p => p?.classList.remove('active'));
+        // 激活排班Tab
+        const scheduleTab = document.querySelector('.sidebar-tab[data-tab="schedule"]');
+        scheduleTab?.classList.add('active');
+        panes['schedule']?.classList.add('active');
     });
     $('#mobileNavHistory')?.addEventListener('click', () => {
         closeMobileSidebar();

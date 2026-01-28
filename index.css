@@ -2464,6 +2464,35 @@ body {
         min-height: 100vh;
     }
 
+    /* 移动端header优化 - 保持单行 */
+    .header {
+        padding: var(--space-xs) var(--space-sm);
+        flex-wrap: nowrap;
+    }
+
+    .header-left {
+        flex-shrink: 0;
+    }
+
+    .header h1 {
+        font-size: 16px;
+    }
+
+    .logo {
+        font-size: 20px;
+    }
+
+    .header-right {
+        flex-shrink: 0;
+        gap: 2px;
+    }
+
+    .btn-icon-only {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+    }
+
     /* 移动端隐藏桌面版导出按钮 */
     .header-right .dropdown,
     .header-right #historyBtn {
