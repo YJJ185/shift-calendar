@@ -1,11 +1,21 @@
 // Service Worker for PWA - 离线缓存支持
-const CACHE_NAME = 'shift-calendar-v1';
+const CACHE_NAME = 'shift-calendar-v2';
 const urlsToCache = [
     './',
     './index.html',
     './index.css',
     './app.js',
-    './manifest.json'
+    './manifest.json',
+    './js/utils.js',
+    './js/state.js',
+    './js/lunar.js',
+    './js/holidays.js',
+    './js/shiftTypes.js',
+    './js/patterns.js',
+    './js/calendar.js',
+    './js/stats.js',
+    './js/export.js',
+    './js/theme.js'
 ];
 
 // 安装 Service Worker
