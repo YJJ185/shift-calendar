@@ -1,21 +1,21 @@
 // ===== 日历渲染模块 =====
 
-import { $, $$, adjustColor } from './utils.js';
-import { state, saveState, formatDate } from './state.js';
+import { $, $$, adjustColor, showToast } from './utils.js';
+import { state, saveState } from './state.js';
 import { getHolidayInfo, getSolarTerm } from './holidays.js';
 import { getLunarDay } from './lunar.js';
 import { updateStats, updateCountdown } from './stats.js';
 
 /**
- * 获取指定日期的班次
- * @param {Object} schedule - 排班方案
- * @param {Date} date - 日期
- * @returns {Object|null}
+ * 获取某日期的班次
  */
 export function getShiftForDate(schedule, date) {
-    const dateStr = formatDate(date);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
 
-    // 检查是否有临时调班
+    // 检查临时调班
     if (state.dayOverrides[dateStr]) {
         const overrideShiftId = state.dayOverrides[dateStr];
         return state.shiftTypes.find(t => t.id === overrideShiftId);
@@ -35,7 +35,7 @@ export function getShiftForDate(schedule, date) {
     const shiftId = pattern[idx];
     const shift = schedule.shiftTypes.find(t => t.id === shiftId);
 
-    // 医护排班特殊规则：周末非值班非夜班自动休息
+    // 周末非值班非夜班自动休息
     if (schedule.weekendRestMode) {
         const dayOfWeek = date.getDay();
         const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
@@ -55,13 +55,11 @@ export function renderCalendar() {
     const container = $('#calendarContainer');
     const schedule = state.schedules.find(s => s.id === state.activeScheduleId);
 
-    // 同步周末休息模式复选框状态
-    const weekendRestMode = $('#weekendRestMode');
-    if (weekendRestMode) {
-        weekendRestMode.checked = schedule ? !!schedule.weekendRestMode : false;
+    // 同步周末休息模式
+    if ($('#weekendRestMode')) {
+        $('#weekendRestMode').checked = schedule ? !!schedule.weekendRestMode : false;
     }
 
-    // 清空容器
     container.innerHTML = '';
 
     if (!schedule) {
@@ -194,96 +192,35 @@ export function renderCalendar() {
 
     updateCurrentRangeLabel();
     updateStats();
-    updateCountdown();
+    if (typeof updateCountdown === 'function') {
+        updateCountdown();
+    }
 }
 
-/**
- * 更新当前范围标签
- */
+// ===== 日期导航 =====
+
 export function updateCurrentRangeLabel() {
-    const yearSelect = $('#yearSelect');
-    const monthSelect = $('#monthSelect');
-    if (yearSelect && monthSelect) {
+    if ($('#yearSelect') && $('#monthSelect')) {
         updateDatePickerValues();
     }
 }
 
-/**
- * 初始化年月选择器
- */
-export function initDatePicker() {
-    const yearSelect = $('#yearSelect');
-    const currentYear = new Date().getFullYear();
-
-    if (yearSelect) {
-        yearSelect.innerHTML = '';
-        for (let year = currentYear - 5; year <= currentYear + 10; year++) {
-            const option = document.createElement('option');
-            option.value = year;
-            option.textContent = year;
-            yearSelect.appendChild(option);
-        }
-    }
-
-    updateDatePickerValues();
-}
-
-/**
- * 更新年月选择器显示值
- */
-export function updateDatePickerValues() {
-    const yearSelect = $('#yearSelect');
-    const monthSelect = $('#monthSelect');
-    if (yearSelect) yearSelect.value = state.currentDate.getFullYear();
-    if (monthSelect) monthSelect.value = state.currentDate.getMonth();
-}
-
-/**
- * 年月选择变更处理
- */
-export function onDatePickerChange() {
-    const year = parseInt($('#yearSelect')?.value);
-    const month = parseInt($('#monthSelect')?.value);
-    state.currentDate = new Date(year, month, 1);
-    renderCalendar();
-}
-
-/**
- * 跳转到今天
- */
-export function goToToday() {
-    state.currentDate = new Date();
-    updateDatePickerValues();
-    renderCalendar();
-}
-
-/**
- * 月份导航
- * @param {number} delta - 偏移量
- */
 export function navigateMonth(delta) {
     const container = $('#calendarContainer');
-    if (container) {
-        container.classList.add(delta > 0 ? 'animate-left' : 'animate-right');
-    }
+    container?.classList.add(delta > 0 ? 'slide-left' : 'slide-right');
 
-    const newDate = new Date(state.currentDate);
-    newDate.setMonth(newDate.getMonth() + delta);
-    state.currentDate = newDate;
-    updateDatePickerValues();
+    state.currentDate = new Date(
+        state.currentDate.getFullYear(),
+        state.currentDate.getMonth() + delta,
+        1
+    );
     renderCalendar();
 
     setTimeout(() => {
-        if (container) {
-            container.classList.remove('animate-left', 'animate-right');
-        }
-    }, 400);
+        container?.classList.remove('slide-left', 'slide-right');
+    }, 300);
 }
 
-/**
- * 设置显示月数
- * @param {number} months
- */
 export function setMonthsToShow(months) {
     state.monthsToShow = months;
     $$('#rangeSelector .btn-range').forEach(btn => {
@@ -292,13 +229,44 @@ export function setMonthsToShow(months) {
     renderCalendar();
 }
 
-/**
- * 初始化日历相关事件
- */
+export function initDatePicker() {
+    const yearSelect = $('#yearSelect');
+    const currentYear = new Date().getFullYear();
+
+    yearSelect.innerHTML = '';
+    for (let year = currentYear - 5; year <= currentYear + 10; year++) {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        yearSelect.appendChild(option);
+    }
+
+    updateDatePickerValues();
+}
+
+export function updateDatePickerValues() {
+    $('#yearSelect').value = state.currentDate.getFullYear();
+    $('#monthSelect').value = state.currentDate.getMonth();
+}
+
+export function onDatePickerChange() {
+    const year = parseInt($('#yearSelect').value);
+    const month = parseInt($('#monthSelect').value);
+    state.currentDate = new Date(year, month, 1);
+    renderCalendar();
+}
+
+export function goToToday() {
+    state.currentDate = new Date();
+    updateDatePickerValues();
+    renderCalendar();
+}
+
+// ===== 初始化日历导航事件 =====
+
 export function initCalendarEvents() {
     $('#prevBtn')?.addEventListener('click', () => navigateMonth(-1));
     $('#nextBtn')?.addEventListener('click', () => navigateMonth(1));
-
     $$('#rangeSelector .btn-range').forEach(btn => {
         btn.addEventListener('click', () => setMonthsToShow(parseInt(btn.dataset.months)));
     });
@@ -308,13 +276,14 @@ export function initCalendarEvents() {
     $('#monthSelect')?.addEventListener('change', onDatePickerChange);
     $('#todayBtn')?.addEventListener('click', goToToday);
 
-    // 周末休息模式切换
+    // 医护智能排班模式
     $('#weekendRestMode')?.addEventListener('change', (e) => {
         const schedule = state.schedules.find(s => s.id === state.activeScheduleId);
         if (schedule) {
             schedule.weekendRestMode = e.target.checked;
             saveState();
             renderCalendar();
+            showToast(e.target.checked ? '已开启周末双休保护' : '已关闭周末双休保护');
         }
     });
 }

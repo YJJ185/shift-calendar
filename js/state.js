@@ -1,4 +1,4 @@
-// ===== 状态管理模块 =====
+// ===== 应用状态管理模块 =====
 
 // 默认班次类型
 export const defaultShiftTypes = [
@@ -17,17 +17,16 @@ export const state = {
     pattern: [],
     currentDate: new Date(),
     monthsToShow: 1,
-    dayOverrides: {},  // 临时调班: { 'YYYY-MM-DD': shiftTypeId }
-    dayNotes: {},      // 日期备注: { 'YYYY-MM-DD': '备注内容' }
-    importantDates: [],// 重要日期
-    todos: {}          // 待办事项
+    dayOverrides: {},
+    dayNotes: {},
+    importantDates: [],
+    todos: {}
 };
 
-// 本地存储 Key
 const STORAGE_KEY = 'shift-calendar-data';
 
 /**
- * 保存状态到 localStorage
+ * 保存状态到本地存储
  */
 export function saveState() {
     const data = {
@@ -35,22 +34,19 @@ export function saveState() {
         schedules: state.schedules,
         activeScheduleId: state.activeScheduleId,
         dayOverrides: state.dayOverrides,
-        dayNotes: state.dayNotes,
-        importantDates: state.importantDates,
-        todos: state.todos
+        dayNotes: state.dayNotes
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
 /**
- * 从 localStorage 加载状态
+ * 从本地存储加载状态
  */
 export function loadState() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
         try {
             const data = JSON.parse(saved);
-            // 加载保存的班次类型，并合并新增的默认班次
             const savedShiftTypes = data.shiftTypes || [];
             const existingIds = savedShiftTypes.map(t => t.id);
             const newTypes = defaultShiftTypes.filter(t => !existingIds.includes(t.id));
@@ -60,8 +56,6 @@ export function loadState() {
             state.activeScheduleId = data.activeScheduleId;
             state.dayOverrides = data.dayOverrides || {};
             state.dayNotes = data.dayNotes || {};
-            state.importantDates = data.importantDates || [];
-            state.todos = data.todos || {};
         } catch (e) {
             console.error('加载数据失败', e);
         }
@@ -70,12 +64,10 @@ export function loadState() {
 
 /**
  * 格式化日期为 YYYY-MM-DD
- * @param {Date} date
- * @returns {string}
  */
 export function formatDate(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }

@@ -1,30 +1,13 @@
 // ===== 工具函数模块 =====
 
-/**
- * DOM 单选择器
- * @param {string} sel - CSS 选择器
- * @returns {Element|null}
- */
 export const $ = (sel) => document.querySelector(sel);
-
-/**
- * DOM 多选择器
- * @param {string} sel - CSS 选择器
- * @returns {NodeList}
- */
 export const $$ = (sel) => document.querySelectorAll(sel);
-
-/**
- * 生成唯一 ID
- * @returns {string}
- */
 export const uuid = () => Date.now().toString(36) + Math.random().toString(36).substr(2);
 
 /**
  * 颜色调整工具
  * @param {string} hex - 十六进制颜色
- * @param {number} amount - 调整量
- * @returns {string}
+ * @param {number} amount - 调整量 (正值变亮，负值变暗)
  */
 export function adjustColor(hex, amount) {
     const num = parseInt(hex.replace('#', ''), 16);
@@ -35,15 +18,12 @@ export function adjustColor(hex, amount) {
 }
 
 /**
- * Toast 提示
- * @param {string} message - 提示消息
- * @param {string} type - 类型 ('success'|'error')
+ * Toast 消息提示
  */
 export function showToast(message, type = 'success') {
     const toast = $('#toast');
-    if (toast) {
-        toast.textContent = message;
-        toast.className = 'toast active ' + type;
-        setTimeout(() => toast.classList.remove('active'), 3000);
-    }
+    if (!toast) return;
+    toast.textContent = message;
+    toast.className = 'toast active ' + type;
+    setTimeout(() => toast.classList.remove('active'), 3000);
 }
