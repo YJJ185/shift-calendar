@@ -13,6 +13,7 @@ import { loadImportantDates, loadTodos, renderImportantDatesList, initFeatureEve
 import { initGestures, initMobileEvents } from './mobile.js';
 import { initSidebarTabs, initDayHoverPreview, initKeyboardShortcuts, initRippleEffect } from './interactions.js';
 import { updateCountdown } from './stats.js';
+import { fetchHolidaysFromAPI } from './holidays.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. 加载数据
@@ -57,4 +58,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 7. 倒计时
     updateCountdown();
+
+    // 8. 后台获取最新假期数据
+    const currentYear = new Date().getFullYear();
+    fetchHolidaysFromAPI(currentYear);
+    fetchHolidaysFromAPI(currentYear + 1);
 });
