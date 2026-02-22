@@ -4,10 +4,9 @@ import { $, adjustColor, showToast } from './utils.js';
 import { state, saveState } from './state.js';
 import { getHolidayInfo, getSolarTerm } from './holidays.js';
 import { getLunarDay } from './lunar.js';
-import { getShiftForDate } from './calendar.js';
+import { getShiftForDate, renderCalendar } from './calendar.js';
 import { renderShiftTypes } from './shiftTypes.js';
 import { renderPatternPreview } from './patterns.js';
-import { renderCalendar } from './calendar.js';
 import { saveImportantDates, renderImportantDatesList, saveTodos } from './features.js';
 
 // ===== Canvas 导出辅助函数 =====

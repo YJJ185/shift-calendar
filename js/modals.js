@@ -3,7 +3,7 @@
 
 import { $, $$, showToast } from './utils.js';
 import { state, saveState, formatDate } from './state.js';
-import { renderCalendar, getShiftForDate, navigateMonth, setMonthsToShow } from './calendar.js';
+import { renderCalendar } from './calendar.js';
 import { renderPatternPreview, renderStartIndexOptions } from './patterns.js';
 import { getLunarDay } from './lunar.js';
 import { saveTodos } from './features.js';
