@@ -35,13 +35,25 @@ export function getShiftForDate(schedule, date) {
     const shiftId = pattern[idx];
     const shift = schedule.shiftTypes.find(t => t.id === shiftId);
 
-    // 周末非值班非夜班自动休息
+    // 周末/法定节假日自动休息逻辑
     if (schedule.weekendRestMode) {
-        const dayOfWeek = date.getDay();
-        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-        if (isWeekend && shift && !['值班', '夜班'].includes(shift.name)) {
-            const restShift = schedule.shiftTypes.find(t => t.name === '休息');
+        const holiday = getHolidayInfo(date);
+
+        // 如果是法定节假日，直接休息（忽略排班规律）
+        if (holiday && holiday.type === 'holiday') {
+            const restShift = schedule.shiftTypes.find(t => t.name.includes('休息') || t.name === '休息');
             if (restShift) return restShift;
+        }
+
+        // 如果不是法定补班日，才进行正常的周末判定
+        const isMakeupWorkday = holiday && holiday.type === 'workday';
+        if (!isMakeupWorkday) {
+            const dayOfWeek = date.getDay();
+            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+            if (isWeekend && shift && !['值班', '夜班'].includes(shift.name)) {
+                const restShift = schedule.shiftTypes.find(t => t.name.includes('休息') || t.name === '休息');
+                if (restShift) return restShift;
+            }
         }
     }
 
