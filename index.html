@@ -512,27 +512,28 @@
         // 注册 Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                // 添加版本号 query param 以强制更新
-                navigator.serviceWorker.register('./sw.js?v=16')
-                    .then(reg => {
-                        console.log('Service Worker 注册成功');
-                        // 发现更新时强制刷新
-                        reg.onupdatefound = () => {
-                            const installingWorker = reg.installing;
-                            installingWorker.onstatechange = () => {
-                                if (installingWorker.state === 'installed') {
-                                    if (navigator.serviceWorker.controller) {
-                                        // 新内容可用，提示用户
-                                        console.log('New content is available; please refresh.');
-                                        if (confirm('发现新版本，是否立即刷新更新？')) {
-                                            window.location.reload();
-                                        }
-                                    }
+                // 先卸载旧的 SW，确保新版本生效
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                    const needsRefresh = registrations.some(reg => {
+                        return reg.active && reg.active.scriptURL.includes('v=');
+                    });
+
+                    // 卸载所有旧版本的 SW
+                    const unregisterPromises = registrations.map(reg => reg.unregister());
+
+                    Promise.all(unregisterPromises).then(() => {
+                        // 注册新的 SW（不带版本号，Vite hash 自动处理缓存）
+                        navigator.serviceWorker.register('./sw.js')
+                            .then(reg => {
+                                console.log('Service Worker 注册成功');
+                                if (needsRefresh) {
+                                    // 如果卸载了旧 SW，刷新页面加载最新内容
+                                    window.location.reload();
                                 }
-                            };
-                        };
-                    })
-                    .catch(err => console.log('Service Worker 注册失败:', err));
+                            })
+                            .catch(err => console.log('Service Worker 注册失败:', err));
+                    });
+                });
             });
         }
     </script>
