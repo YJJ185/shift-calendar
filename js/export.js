@@ -1,13 +1,277 @@
 // ===== 导出功能模块 =====
 
-import { $, adjustColor, showToast } from './utils.js';
-import { state, saveState } from './state.js';
+import { $, adjustColor, showToast, safeColor } from './utils.js';
+import { state, saveState, formatDate, parseLocalDate, defaultShiftTypes } from './state.js';
 import { getHolidayInfo, getSolarTerm } from './holidays.js';
 import { getLunarDay } from './lunar.js';
 import { getShiftForDate, renderCalendar } from './calendar.js';
 import { renderShiftTypes } from './shiftTypes.js';
 import { renderPatternPreview } from './patterns.js';
 import { saveImportantDates, renderImportantDatesList, saveTodos } from './features.js';
+
+const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const MAX_IMPORT_WARNINGS = 30;
+
+function _pushWarning(warnings, message) {
+    if (warnings.length < MAX_IMPORT_WARNINGS) {
+        warnings.push(message);
+    }
+}
+
+function _isPlainObject(value) {
+    return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function _toSafeString(value, fallback = '') {
+    const text = String(value ?? '').trim();
+    return text || fallback;
+}
+
+function _isValidDateKey(value) {
+    if (typeof value !== 'string' || !DATE_KEY_RE.test(value)) return false;
+    return !!parseLocalDate(value);
+}
+
+function _uniqueId(rawId, usedIds, fallbackPrefix) {
+    let base = _toSafeString(rawId, `${fallbackPrefix}-${usedIds.size + 1}`);
+    let candidate = base;
+    let suffix = 1;
+    while (usedIds.has(candidate)) {
+        suffix += 1;
+        candidate = `${base}-${suffix}`;
+    }
+    usedIds.add(candidate);
+    return candidate;
+}
+
+function _normalizeShiftTypes(rawShiftTypes, fallbackShiftTypes, warnings, scopeLabel = '班次') {
+    const source = Array.isArray(rawShiftTypes) ? rawShiftTypes : [];
+    if (!Array.isArray(rawShiftTypes)) {
+        _pushWarning(warnings, `${scopeLabel}: shiftTypes 结构异常，已回退默认班次`);
+    }
+
+    const fallback = Array.isArray(fallbackShiftTypes) && fallbackShiftTypes.length > 0
+        ? fallbackShiftTypes
+        : defaultShiftTypes;
+
+    const normalized = [];
+    const usedIds = new Set();
+
+    source.forEach((item, index) => {
+        if (!_isPlainObject(item)) {
+            _pushWarning(warnings, `${scopeLabel}: 第 ${index + 1} 个班次无效，已跳过`);
+            return;
+        }
+
+        const fb = fallback[index % fallback.length] || defaultShiftTypes[index % defaultShiftTypes.length];
+        const id = _uniqueId(item.id, usedIds, `shift-${index + 1}`);
+        const name = _toSafeString(item.name, fb?.name || `班次${index + 1}`);
+        const icon = _toSafeString(item.icon, fb?.icon || '📌');
+        const color = safeColor(item.color, fb?.color || '#9CA3AF');
+        normalized.push({ id, name, icon, color });
+    });
+
+    if (normalized.length === 0) {
+        _pushWarning(warnings, `${scopeLabel}: 未检测到可用班次，已使用默认班次`);
+        defaultShiftTypes.forEach((item, index) => {
+            const id = _uniqueId(item.id, usedIds, `shift-${index + 1}`);
+            normalized.push({
+                id,
+                name: _toSafeString(item.name, `班次${index + 1}`),
+                icon: _toSafeString(item.icon, '📌'),
+                color: safeColor(item.color, '#9CA3AF')
+            });
+        });
+    }
+
+    return normalized;
+}
+
+function _normalizeSchedules(rawSchedules, rootShiftTypes, warnings) {
+    const source = Array.isArray(rawSchedules) ? rawSchedules : [];
+    if (!Array.isArray(rawSchedules)) {
+        _pushWarning(warnings, 'schedules 结构异常，已回退为空');
+    }
+
+    const normalized = [];
+    const usedScheduleIds = new Set();
+    const nowIso = new Date().toISOString();
+
+    source.forEach((item, index) => {
+        if (!_isPlainObject(item)) {
+            _pushWarning(warnings, `第 ${index + 1} 条排班记录无效，已跳过`);
+            return;
+        }
+
+        const scheduleShiftTypes = _normalizeShiftTypes(item.shiftTypes, rootShiftTypes, warnings, `排班记录 ${index + 1}`);
+        const shiftIdSet = new Set(scheduleShiftTypes.map(t => t.id));
+
+        const rawPattern = Array.isArray(item.pattern) ? item.pattern : [];
+        if (!Array.isArray(item.pattern)) {
+            _pushWarning(warnings, `排班记录 ${index + 1}: pattern 异常，已自动修复`);
+        }
+
+        let pattern = rawPattern
+            .map(v => _toSafeString(v, ''))
+            .filter(id => id && shiftIdSet.has(id));
+
+        if (pattern.length === 0) {
+            pattern = [scheduleShiftTypes[0].id];
+            _pushWarning(warnings, `排班记录 ${index + 1}: pattern 为空，已使用首个班次兜底`);
+        }
+
+        let startDate = _toSafeString(item.startDate, '');
+        if (!_isValidDateKey(startDate)) {
+            startDate = formatDate(new Date());
+            _pushWarning(warnings, `排班记录 ${index + 1}: startDate 无效，已回退为今天`);
+        }
+
+        let startIndex = Number.parseInt(item.startIndex, 10);
+        if (!Number.isFinite(startIndex)) startIndex = 0;
+        startIndex = ((startIndex % pattern.length) + pattern.length) % pattern.length;
+
+        const id = _uniqueId(item.id, usedScheduleIds, `schedule-${index + 1}`);
+        const name = _toSafeString(item.name, `排班方案 ${normalized.length + 1}`);
+
+        let createdAt = _toSafeString(item.createdAt, nowIso);
+        if (Number.isNaN(new Date(createdAt).getTime())) {
+            createdAt = nowIso;
+        }
+
+        normalized.push({
+            id,
+            name,
+            createdAt,
+            startDate,
+            startIndex,
+            pattern,
+            shiftTypes: scheduleShiftTypes,
+            weekendRestMode: !!item.weekendRestMode,
+            isActive: !!item.isActive
+        });
+    });
+
+    return normalized;
+}
+
+function _normalizeDateValueMap(rawMap, valueNormalizer, warnings, label) {
+    const normalized = {};
+    if (!_isPlainObject(rawMap)) {
+        if (rawMap !== undefined) {
+            _pushWarning(warnings, `${label} 结构异常，已回退为空`);
+        }
+        return normalized;
+    }
+
+    Object.entries(rawMap).forEach(([key, value]) => {
+        if (!_isValidDateKey(key)) {
+            _pushWarning(warnings, `${label} 含无效日期键 ${key}，已跳过`);
+            return;
+        }
+
+        const normalizedValue = valueNormalizer(value, key);
+        if (normalizedValue !== null && normalizedValue !== undefined) {
+            normalized[key] = normalizedValue;
+        }
+    });
+
+    return normalized;
+}
+
+function _normalizeImportantDates(rawImportantDates, warnings) {
+    const source = Array.isArray(rawImportantDates) ? rawImportantDates : [];
+    if (!Array.isArray(rawImportantDates) && rawImportantDates !== undefined) {
+        _pushWarning(warnings, 'importantDates 结构异常，已回退为空');
+    }
+
+    const normalized = [];
+    const usedIds = new Set();
+
+    source.forEach((item, index) => {
+        if (!_isPlainObject(item)) {
+            _pushWarning(warnings, `importantDates 第 ${index + 1} 项无效，已跳过`);
+            return;
+        }
+
+        const date = _toSafeString(item.date, '');
+        if (!_isValidDateKey(date)) {
+            _pushWarning(warnings, `importantDates 第 ${index + 1} 项日期无效，已跳过`);
+            return;
+        }
+
+        const id = _uniqueId(item.id, usedIds, `important-${index + 1}`);
+        const name = _toSafeString(item.name, '重要日期');
+        const icon = _toSafeString(item.icon, '📅');
+        const repeat = item.repeat !== false;
+        normalized.push({ id, date, name, icon, repeat });
+    });
+
+    return normalized;
+}
+
+function _normalizeImportPayload(rawData) {
+    if (!_isPlainObject(rawData)) {
+        throw new Error('导入文件不是有效对象');
+    }
+
+    const warnings = [];
+    const shiftTypes = _normalizeShiftTypes(rawData.shiftTypes, defaultShiftTypes, warnings, '全局');
+    const schedules = _normalizeSchedules(rawData.schedules, shiftTypes, warnings);
+
+    let activeScheduleId = _toSafeString(rawData.activeScheduleId, '');
+    if (!schedules.some(s => s.id === activeScheduleId)) {
+        if (activeScheduleId) {
+            _pushWarning(warnings, 'activeScheduleId 无效，已自动切换到首个方案');
+        }
+        activeScheduleId = schedules[0]?.id || null;
+    }
+
+    const globalShiftIdSet = new Set(shiftTypes.map(t => t.id));
+    const dayOverrides = _normalizeDateValueMap(
+        rawData.dayOverrides,
+        (value) => {
+            const id = _toSafeString(value, '');
+            return globalShiftIdSet.has(id) ? id : null;
+        },
+        warnings,
+        'dayOverrides'
+    );
+
+    const dayNotes = _normalizeDateValueMap(
+        rawData.dayNotes,
+        (value) => {
+            const text = _toSafeString(value, '');
+            return text || null;
+        },
+        warnings,
+        'dayNotes'
+    );
+
+    const todos = _normalizeDateValueMap(
+        rawData.todos,
+        (value) => {
+            const text = _toSafeString(value, '');
+            return text || null;
+        },
+        warnings,
+        'todos'
+    );
+
+    const importantDates = _normalizeImportantDates(rawData.importantDates, warnings);
+
+    return {
+        normalized: {
+            shiftTypes,
+            schedules,
+            activeScheduleId,
+            dayOverrides,
+            dayNotes,
+            importantDates,
+            todos
+        },
+        warnings
+    };
+}
 
 // ===== Canvas 导出辅助函数 =====
 
@@ -323,6 +587,13 @@ function _drawCalendarToCanvas(schedule) {
     return canvas;
 }
 
+function _safeFileName(name, fallback = 'shift-calendar') {
+    const cleaned = String(name ?? '')
+        .replace(/[\\/:*?"<>|]+/g, '-')
+        .trim();
+    return cleaned || fallback;
+}
+
 // ===== 导出函数 =====
 
 export async function exportAsImage() {
@@ -344,7 +615,7 @@ export async function exportAsImage() {
         }
 
         const link = document.createElement('a');
-        link.download = `${schedule.name}-${new Date().toISOString().slice(0, 10)}.png`;
+        link.download = `${_safeFileName(schedule.name, '排班日历')}-${formatDate(new Date())}.png`;
         link.href = canvas.toDataURL('image/png', 1.0);
         link.click();
         showToast('图片已导出！');
@@ -371,7 +642,7 @@ export function exportAsJson() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `shift-calendar-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    link.download = `shift-calendar-backup-${formatDate(new Date())}.json`;
     link.click();
     URL.revokeObjectURL(url);
     showToast('数据已导出！');
@@ -388,15 +659,27 @@ export function importFromJson(event) {
     const reader = new FileReader();
     reader.onload = (e) => {
         try {
-            const data = JSON.parse(e.target.result);
+            const rawData = JSON.parse(e.target.result);
+            const { normalized, warnings } = _normalizeImportPayload(rawData);
 
-            if (data.shiftTypes) state.shiftTypes = data.shiftTypes;
-            if (data.schedules) state.schedules = data.schedules;
-            if (data.activeScheduleId) state.activeScheduleId = data.activeScheduleId;
-            if (data.dayOverrides) state.dayOverrides = data.dayOverrides;
-            if (data.dayNotes) state.dayNotes = data.dayNotes;
-            if (data.importantDates) state.importantDates = data.importantDates;
-            if (data.todos) state.todos = data.todos;
+            state.shiftTypes = normalized.shiftTypes;
+            state.schedules = normalized.schedules;
+            state.activeScheduleId = normalized.activeScheduleId;
+            state.dayOverrides = normalized.dayOverrides;
+            state.dayNotes = normalized.dayNotes;
+            state.importantDates = normalized.importantDates;
+            state.todos = normalized.todos;
+
+            const activeSchedule = state.schedules.find(s => s.id === state.activeScheduleId) || null;
+            if (activeSchedule) {
+                state.pattern = [...activeSchedule.pattern];
+                state.currentDate = parseLocalDate(activeSchedule.startDate) || new Date();
+                if ($('#scheduleName')) $('#scheduleName').value = activeSchedule.name || '';
+                if ($('#startDate')) $('#startDate').value = activeSchedule.startDate || '';
+            } else {
+                state.pattern = [];
+                if ($('#scheduleName')) $('#scheduleName').value = '';
+            }
 
             saveState();
             saveImportantDates();
@@ -404,10 +687,19 @@ export function importFromJson(event) {
 
             renderShiftTypes();
             renderPatternPreview();
+            if (activeSchedule && $('#startShift')) {
+                $('#startShift').value = String(activeSchedule.startIndex || 0);
+                $('#startShift').dispatchEvent(new Event('change'));
+            }
             renderCalendar();
             renderImportantDatesList();
 
-            showToast('数据已导入！');
+            if (warnings.length > 0) {
+                console.warn('导入时自动修复的问题:', warnings);
+                showToast(`数据已导入，已自动修复 ${warnings.length} 处异常`);
+            } else {
+                showToast('数据已导入！');
+            }
         } catch (err) {
             console.error('导入失败:', err);
             showToast('导入失败：文件格式错误', 'error');

@@ -1,7 +1,7 @@
 // ===== 日历渲染模块 =====
 
-import { $, $$, adjustColor, showToast } from './utils.js';
-import { state, saveState } from './state.js';
+import { $, $$, adjustColor, showToast, escapeHTML, safeColor } from './utils.js';
+import { state, saveState, parseLocalDate } from './state.js';
 import { getHolidayInfo, getSolarTerm } from './holidays.js';
 import { getLunarDay } from './lunar.js';
 import { updateStats, updateCountdown } from './stats.js';
@@ -10,9 +10,19 @@ import { updateStats, updateCountdown } from './stats.js';
  * 获取某日期的班次
  */
 export function getShiftForDate(schedule, date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+    if (!schedule || !Array.isArray(schedule.pattern) || schedule.pattern.length === 0) {
+        return null;
+    }
+
+    const target = parseLocalDate(date);
+    const start = parseLocalDate(schedule.startDate);
+    if (!target || !start) {
+        return null;
+    }
+
+    const year = target.getFullYear();
+    const month = String(target.getMonth() + 1).padStart(2, '0');
+    const day = String(target.getDate()).padStart(2, '0');
     const dateStr = `${year}-${month}-${day}`;
 
     // 检查临时调班
@@ -22,8 +32,6 @@ export function getShiftForDate(schedule, date) {
     }
 
     // 正常计算班次
-    const start = new Date(schedule.startDate);
-    const target = new Date(date);
     start.setHours(0, 0, 0, 0);
     target.setHours(0, 0, 0, 0);
 
@@ -37,7 +45,7 @@ export function getShiftForDate(schedule, date) {
 
     // 周末/法定节假日自动休息逻辑
     if (schedule.weekendRestMode) {
-        const holiday = getHolidayInfo(date);
+        const holiday = getHolidayInfo(target);
 
         // 如果是法定节假日，直接休息（忽略排班规律）
         if (holiday && holiday.type === 'holiday') {
@@ -48,7 +56,7 @@ export function getShiftForDate(schedule, date) {
         // 如果不是法定补班日，才进行正常的周末判定
         const isMakeupWorkday = holiday && holiday.type === 'workday';
         if (!isMakeupWorkday) {
-            const dayOfWeek = date.getDay();
+            const dayOfWeek = target.getDay();
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
             if (isWeekend && shift && !['值班', '夜班'].includes(shift.name)) {
                 const restShift = schedule.shiftTypes.find(t => t.name.includes('休息') || t.name === '休息');
@@ -143,12 +151,17 @@ export function renderCalendar() {
             if (isToday) classes += ' today';
             if (isWeekend) classes += ' weekend';
 
+            const safeDisplayText = escapeHTML(displayText);
+
             let shiftHtml = '';
             if (shift) {
+                const shiftColor = safeColor(shift.color, '#9CA3AF');
+                const shiftIcon = escapeHTML(shift.icon);
+                const shiftName = escapeHTML(shift.name);
                 shiftHtml = `
-                    <div class="day-shift" style="background: linear-gradient(135deg, ${shift.color} 0%, ${adjustColor(shift.color, -20)} 100%);">
-                        <span class="shift-icon">${shift.icon}</span>
-                        <span class="shift-name">${shift.name}</span>
+                    <div class="day-shift" style="background: linear-gradient(135deg, ${shiftColor} 0%, ${adjustColor(shiftColor, -20)} 100%);">
+                        <span class="shift-icon">${shiftIcon}</span>
+                        <span class="shift-name">${shiftName}</span>
                     </div>`;
             }
 
@@ -168,11 +181,16 @@ export function renderCalendar() {
             if (state.importantDates && state.importantDates.length > 0) {
                 const monthDay = `${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const importantDate = state.importantDates.find(d => {
-                    const [, m, dd] = d.date.split('-');
+                    if (!d || !d.date) return false;
+                    if (d.repeat === false) return d.date === dateStr;
+                    const parts = String(d.date).split('-');
+                    if (parts.length !== 3) return false;
+                    const m = parts[1];
+                    const dd = parts[2];
                     return `${m}-${dd}` === monthDay;
                 });
                 if (importantDate) {
-                    importantDateBadge = `<span class="important-date-badge" title="${importantDate.name}">${importantDate.icon}</span>`;
+                    importantDateBadge = `<span class="important-date-badge" title="${escapeHTML(importantDate.name)}">${escapeHTML(importantDate.icon || '📅')}</span>`;
                 }
             }
 
@@ -188,7 +206,7 @@ export function renderCalendar() {
                     ${todoIndicator}
                     <div class="day-header">
                         <span class="day-number">${day}</span>
-                        <span class="${displayClass}">${displayText}</span>
+                        <span class="${displayClass}">${safeDisplayText}</span>
                     </div>
                     ${shiftHtml}
                     ${importantDateBadge}

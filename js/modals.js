@@ -1,8 +1,8 @@
 // ===== 弹窗管理模块 =====
 // 历史记录、确认对话框、日期编辑、单日排班修改
 
-import { $, $$, showToast } from './utils.js';
-import { state, saveState, formatDate } from './state.js';
+import { $, $$, showToast, escapeHTML, safeColor } from './utils.js';
+import { state, saveState, formatDate, parseLocalDate } from './state.js';
 import { renderCalendar } from './calendar.js';
 import { renderPatternPreview, renderStartIndexOptions } from './patterns.js';
 import { getLunarDay } from './lunar.js';
@@ -32,19 +32,21 @@ function renderHistoryList() {
         const date = new Date(s.createdAt).toLocaleDateString('zh-CN');
         const patternDots = s.pattern.slice(0, 6).map(id => {
             const type = s.shiftTypes.find(t => t.id === id);
-            return type ? `<span class="history-pattern-dot" style="background:${type.color}"></span>` : '';
+            return type ? `<span class="history-pattern-dot" style="background:${safeColor(type.color, '#9CA3AF')}"></span>` : '';
         }).join('');
+        const safeName = escapeHTML(s.name);
+        const safeStartDate = escapeHTML(s.startDate);
 
         return `
-            <div class="history-item${isActive ? ' active' : ''}" data-id="${s.id}">
+            <div class="history-item${isActive ? ' active' : ''}" data-id="${escapeHTML(s.id)}">
                 <div class="history-item-icon">📅</div>
                 <div class="history-item-info">
-                    <div class="history-item-name">${s.name}</div>
-                    <div class="history-item-date">创建于 ${date} · 起始: ${s.startDate}</div>
+                    <div class="history-item-name">${safeName}</div>
+                    <div class="history-item-date">创建于 ${escapeHTML(date)} · 起始: ${safeStartDate}</div>
                     <div class="history-item-pattern">${patternDots}</div>
                 </div>
                 ${isActive ? '<span class="history-item-active-badge">当前</span>' : ''}
-                <button class="history-delete-btn" data-id="${s.id}" title="删除此记录">×</button>
+                <button class="history-delete-btn" data-id="${escapeHTML(s.id)}" title="删除此记录">×</button>
             </div>
         `;
     }).join('');
@@ -67,13 +69,13 @@ function initHistoryListEvents() {
 
         const item = e.target.closest('.history-item');
         if (item) {
-            const schedule = state.schedules.find(s => s.id === item.dataset.id);
-            if (schedule) {
-                state.activeScheduleId = schedule.id;
-                state.currentDate = new Date(schedule.startDate);
-                state.pattern = [...schedule.pattern];
-                $('#scheduleName').value = schedule.name;
-                $('#startDate').value = schedule.startDate;
+                const schedule = state.schedules.find(s => s.id === item.dataset.id);
+                if (schedule) {
+                    state.activeScheduleId = schedule.id;
+                    state.currentDate = parseLocalDate(schedule.startDate) || new Date();
+                    state.pattern = [...schedule.pattern];
+                    $('#scheduleName').value = schedule.name;
+                    $('#startDate').value = schedule.startDate;
                 renderStartIndexOptions();
                 $('#startShift').value = schedule.startIndex || 0;
                 saveState();
@@ -116,7 +118,7 @@ function deleteSchedule(scheduleId) {
         if (state.activeScheduleId === pendingDeleteScheduleId) {
             if (state.schedules.length > 0) {
                 state.activeScheduleId = state.schedules[0].id;
-                state.currentDate = new Date(state.schedules[0].startDate);
+                state.currentDate = parseLocalDate(state.schedules[0].startDate) || new Date();
             } else {
                 state.activeScheduleId = null;
             }
@@ -147,7 +149,7 @@ export function openDayEditModal(dateStr) {
     $('#dayEditDate').innerHTML = `
         <div class="date-main">${month}月${day}日 ${weekdays[date.getDay()]}</div>
         <div class="date-sub">${year}年</div>
-        <div class="date-lunar">${lunar}</div>
+        <div class="date-lunar">${escapeHTML(lunar)}</div>
     `;
     $('#dayEditTitle').textContent = `编辑 ${month}月${day}日`;
 
@@ -175,8 +177,11 @@ export function openDayEditModal(dateStr) {
 }
 
 function getShiftForDateOriginal(schedule, date) {
-    const start = new Date(schedule.startDate);
-    const target = new Date(date);
+    const start = parseLocalDate(schedule.startDate);
+    const target = parseLocalDate(date);
+    if (!start || !target || !Array.isArray(schedule.pattern) || schedule.pattern.length === 0) {
+        return null;
+    }
     start.setHours(0, 0, 0, 0);
     target.setHours(0, 0, 0, 0);
 
@@ -193,10 +198,10 @@ function renderDayEditShifts(selectedId) {
     const container = $('#dayEditShifts');
     container.innerHTML = state.shiftTypes.map(t => `
         <div class="day-edit-shift-btn ${t.id === selectedId ? 'selected' : ''}" 
-             data-id="${t.id}" 
-             style="background: ${t.color}">
-            <span class="shift-icon">${t.icon}</span>
-            <span class="shift-name">${t.name}</span>
+             data-id="${escapeHTML(t.id)}" 
+             style="background: ${safeColor(t.color, '#9CA3AF')}">
+            <span class="shift-icon">${escapeHTML(t.icon)}</span>
+            <span class="shift-name">${escapeHTML(t.name)}</span>
         </div>
     `).join('');
 
@@ -219,6 +224,8 @@ export function closeDayEditModal() {
 export function saveDayEdit() {
     if (!editingDateStr) return;
 
+    const currentEditingDate = editingDateStr;
+    const selectedShiftAtSave = selectedShiftId;
     const isOverride = $('#dayEditOverride').checked;
     const note = $('#dayNote').value.trim();
     const todo = $('#dayTodo')?.value.trim() || '';
@@ -248,6 +255,7 @@ export function saveDayEdit() {
     renderCalendar();
     closeDayEditModal();
     showToast(isOverride ? '已保存临时调班' : '已保存');
+    maybeAutoFillDutyFollowups(currentEditingDate, selectedShiftAtSave, isOverride);
 }
 
 export function clearDayOverride() {
@@ -262,105 +270,45 @@ export function clearDayOverride() {
     showToast('已恢复默认排班');
 }
 
-// ===== 单日排班修改（快速弹窗） =====
+function maybeAutoFillDutyFollowups(dateStr, shiftId, isOverride) {
+    if (!isOverride || !dateStr || !shiftId) return;
 
-let editingDate = null;
+    const selectedShift = state.shiftTypes.find(t => t.id === shiftId);
+    if (!selectedShift || selectedShift.name !== '值班') return;
+
+    const nightShift = state.shiftTypes.find(t => t.name === '夜班');
+    const restShift = state.shiftTypes.find(t => t.name.includes('休息') || t.name.includes('双休'));
+    if (!nightShift || !restShift) return;
+
+    const currentDate = parseLocalDate(dateStr);
+    if (!currentDate) return;
+
+    const d1 = new Date(currentDate);
+    const d2 = new Date(currentDate);
+    d1.setDate(d1.getDate() + 1);
+    d2.setDate(d2.getDate() + 2);
+    const nextDateStr = formatDate(d1);
+    const nextNextDateStr = formatDate(d2);
+
+    setTimeout(() => {
+        showConfirmDialog('检测到您设置了"值班"，是否自动将后两天设为"夜班"和"休息"？', () => {
+            state.dayOverrides[nextDateStr] = nightShift.id;
+            state.dayOverrides[nextNextDateStr] = restShift.id;
+            saveState();
+            renderCalendar();
+            showToast('已自动填充后两天班次');
+        }, '自动填充', 'primary');
+    }, 200);
+}
 
 export function initEditShiftModal() {
     $('#calendarContainer').addEventListener('click', (e) => {
         if (e.target.classList.contains('empty') || e.target.closest('.empty')) return;
         const dayEl = e.target.closest('.calendar-day');
         if (dayEl && dayEl.dataset.date) {
-            openEditShiftModal(dayEl.dataset.date);
+            openDayEditModal(dayEl.dataset.date);
         }
     });
-
-    $('#closeEditShiftBtn')?.addEventListener('click', closeEditShiftModal);
-    $('#editShiftModal .modal-overlay')?.addEventListener('click', closeEditShiftModal);
-    $('#resetShiftBtn')?.addEventListener('click', resetShiftOverride);
-}
-
-function openEditShiftModal(dateStr) {
-    editingDate = dateStr;
-    const date = new Date(dateStr);
-
-    const weekMap = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-    const weekStr = weekMap[date.getDay()];
-    $('#editShiftDate').textContent = `${dateStr} ${weekStr} (${getLunarDay(date)})`;
-
-    const grid = $('#editShiftGrid');
-    grid.innerHTML = '';
-
-    const currentOverrideId = state.dayOverrides[dateStr];
-
-    state.shiftTypes.forEach(type => {
-        const btn = document.createElement('div');
-        btn.className = 'shift-option-btn';
-        if (currentOverrideId === type.id) {
-            btn.classList.add('active');
-        }
-        btn.innerHTML = `
-            <span class="shift-icon">${type.icon}</span>
-            <span class="shift-name">${type.name}</span>
-        `;
-        btn.onclick = () => selectShiftOverride(type.id);
-        grid.appendChild(btn);
-    });
-
-    $('#editShiftModal').classList.add('active');
-}
-
-function closeEditShiftModal() {
-    $('#editShiftModal').classList.remove('active');
-    editingDate = null;
-}
-
-function selectShiftOverride(shiftId) {
-    if (!editingDate) return;
-
-    state.dayOverrides[editingDate] = shiftId;
-    saveState();
-    renderCalendar();
-    showToast('已修改该日班次');
-
-    // 智能联动：值班 -> 夜班 -> 休息
-    const selectedShift = state.shiftTypes.find(t => t.id === shiftId);
-    if (selectedShift && selectedShift.name === '值班') {
-        const nightShift = state.shiftTypes.find(t => t.name === '夜班');
-        const restShift = state.shiftTypes.find(t => t.name.includes('休息') || t.name.includes('双休'));
-
-        if (nightShift && restShift) {
-            const currentDate = new Date(editingDate);
-            const d1 = new Date(currentDate); d1.setDate(d1.getDate() + 1);
-            const d2 = new Date(currentDate); d2.setDate(d2.getDate() + 2);
-
-            const nextDateStr = formatDate(d1);
-            const nextNextDateStr = formatDate(d2);
-
-            setTimeout(() => {
-                showConfirmDialog('检测到您设置了"值班"，是否自动将后两天设为"夜班"和"休息"？', () => {
-                    state.dayOverrides[nextDateStr] = nightShift.id;
-                    state.dayOverrides[nextNextDateStr] = restShift.id;
-                    saveState();
-                    renderCalendar();
-                    showToast('已自动填充后两天班次');
-                }, '自动填充', 'primary');
-            }, 300);
-        }
-    }
-
-    closeEditShiftModal();
-}
-
-function resetShiftOverride() {
-    if (!editingDate) return;
-    if (state.dayOverrides[editingDate]) {
-        delete state.dayOverrides[editingDate];
-        saveState();
-        renderCalendar();
-        showToast('已恢复默认排班');
-    }
-    closeEditShiftModal();
 }
 
 // ===== 初始化弹窗事件 =====

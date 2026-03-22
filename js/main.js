@@ -2,7 +2,7 @@
 // 导入所有模块并初始化应用
 
 import { $, $$ } from './utils.js';
-import { state, loadState, saveState } from './state.js';
+import { state, loadState, formatDate } from './state.js';
 import { renderShiftTypes, initShiftTypeEvents } from './shiftTypes.js';
 import { renderPatternPreview, initPatternEvents } from './patterns.js';
 import { renderCalendar, initCalendarEvents } from './calendar.js';
@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2. 初始化 UI 组件
     initEditShiftModal();
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = formatDate(new Date());
     if ($('#startDate')) $('#startDate').value = today;
     state.currentDate = new Date();
 

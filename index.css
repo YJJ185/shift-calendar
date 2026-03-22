@@ -1602,54 +1602,6 @@ body {
     padding: var(--space-md) 0;
 }
 
-/* Edit Shift Modal Styles */
-.modal-subtitle {
-    color: var(--text-secondary);
-    margin-bottom: var(--space-md);
-    font-size: 14px;
-    text-align: center;
-}
-
-.shift-selection-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: var(--space-md);
-    padding: var(--space-sm);
-}
-
-.shift-option-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-sm);
-    padding: var(--space-md);
-    background: var(--bg-hover);
-    border: 2px solid transparent;
-    border-radius: var(--radius-md);
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-}
-
-.shift-option-btn:hover {
-    transform: translateY(-2px);
-    background: var(--bg-secondary);
-}
-
-.shift-option-btn.active {
-    border-color: var(--accent-primary);
-    background: rgba(99, 102, 241, 0.1);
-    box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
-}
-
-.shift-option-btn .shift-icon {
-    font-size: 24px;
-}
-
-.shift-option-btn .shift-name {
-    font-weight: 600;
-}
-
 /* Responsive */
 @media (max-width: 1200px) {
     .main-content {
@@ -1914,14 +1866,12 @@ body {
     }
 
     /* 班次选择按钮 - 更大触摸区域 */
-    .day-edit-shift-btn,
-    .shift-option-btn {
+    .day-edit-shift-btn {
         padding: var(--space-md);
         min-height: 60px;
     }
 
-    .day-edit-shift-btn .shift-icon,
-    .shift-option-btn .shift-icon {
+    .day-edit-shift-btn .shift-icon {
         font-size: 28px;
     }
 

@@ -1,7 +1,7 @@
 // ===== 排班规律管理模块 =====
 
-import { $, uuid, showToast } from './utils.js';
-import { state, saveState } from './state.js';
+import { $, uuid, showToast, escapeHTML, safeColor } from './utils.js';
+import { state, saveState, parseLocalDate } from './state.js';
 import { renderCalendar } from './calendar.js';
 
 /**
@@ -12,8 +12,8 @@ export function renderPatternBuilder() {
     if (!builder) return;
 
     builder.innerHTML = state.shiftTypes.map(t => `
-        <span class="pattern-btn" data-id="${t.id}" style="background:${t.color}">
-            ${t.icon} ${t.name}
+        <span class="pattern-btn" data-id="${escapeHTML(t.id)}" style="background:${safeColor(t.color, '#9CA3AF')}">
+            ${escapeHTML(t.icon)} ${escapeHTML(t.name)}
         </span>
     `).join('');
 
@@ -70,7 +70,7 @@ export function renderPatternPreview() {
             const type = state.shiftTypes.find(t => t.id === id);
             if (!type) return '';
             const arrow = i < state.pattern.length - 1 ? '<span class="pattern-arrow">→</span>' : '';
-            return `<span class="pattern-item" data-index="${i}" style="background:${type.color}" title="位置${i + 1}: ${type.name}（点击删除）"><span class="pattern-pos">${i + 1}</span>${type.icon}</span>${arrow}`;
+            return `<span class="pattern-item" data-index="${i}" style="background:${safeColor(type.color, '#9CA3AF')}" title="位置${i + 1}: ${escapeHTML(type.name)}（点击删除）"><span class="pattern-pos">${i + 1}</span>${escapeHTML(type.icon)}</span>${arrow}`;
         }).join('');
 
         preview.querySelectorAll('.pattern-item').forEach(item => {
@@ -103,7 +103,7 @@ export function renderStartIndexOptions() {
         select.innerHTML = state.pattern.map((id, i) => {
             const type = state.shiftTypes.find(t => t.id === id);
             if (!type) return '';
-            return `<option value="${i}">第${i + 1}天 - ${type.icon} ${type.name}</option>`;
+            return `<option value="${i}">第${i + 1}天 - ${escapeHTML(type.icon)} ${escapeHTML(type.name)}</option>`;
         }).join('');
 
         select.onchange = updateSchedulePreview;
@@ -130,7 +130,7 @@ export function updateSchedulePreview() {
         const shiftId = state.pattern[idx];
         const type = state.shiftTypes.find(t => t.id === shiftId);
         if (!type) return '';
-        return `<span class="preview-day">${dayName}: ${type.icon}${type.name}</span>`;
+        return `<span class="preview-day">${dayName}: ${escapeHTML(type.icon)}${escapeHTML(type.name)}</span>`;
     }).join('');
 
     preview.innerHTML = `
@@ -174,7 +174,7 @@ export function generateSchedule() {
     state.activeScheduleId = schedule.id;
 
     saveState();
-    state.currentDate = new Date(startDate);
+    state.currentDate = parseLocalDate(startDate) || new Date();
     renderCalendar();
     showToast('排班方案已生成！');
 }

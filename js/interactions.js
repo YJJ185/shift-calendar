@@ -1,7 +1,7 @@
 // ===== 交互功能模块 =====
 // 悬停预览、键盘快捷键、侧边栏Tab切换、涟漪效果
 
-import { $, $$, showToast } from './utils.js';
+import { $, $$, showToast, escapeHTML, safeColor } from './utils.js';
 import { state } from './state.js';
 import { getShiftForDate, navigateMonth, setMonthsToShow, goToToday } from './calendar.js';
 import { openHistoryModal } from './modals.js';
@@ -93,11 +93,12 @@ function showDayPreview(dayEl, e) {
     if (schedule) {
         const shift = getShiftForDate(schedule, date);
         if (shift) {
+            const shiftColor = safeColor(shift.color, '#9CA3AF');
             $('#previewShift').innerHTML = `
-                <span class="day-preview-shift-icon">${shift.icon}</span>
-                <span class="day-preview-shift-name" style="color: ${shift.color}">${shift.name}</span>
+                <span class="day-preview-shift-icon">${escapeHTML(shift.icon)}</span>
+                <span class="day-preview-shift-name" style="color: ${shiftColor}">${escapeHTML(shift.name)}</span>
             `;
-            $('#previewShift').style.background = shift.color + '20';
+            $('#previewShift').style.background = shiftColor + '20';
         } else {
             $('#previewShift').innerHTML = '<span style="color: var(--text-muted)">无排班</span>';
             $('#previewShift').style.background = 'transparent';
@@ -105,9 +106,9 @@ function showDayPreview(dayEl, e) {
     }
 
     let infoHtml = '';
-    if (hasNote) infoHtml += `<div class="day-preview-note">📝 ${state.dayNotes[dateStr]}</div>`;
-    if (hasTodo) infoHtml += `<div class="day-preview-note">✅ ${state.todos[dateStr]}</div>`;
-    if (isHoliday) infoHtml += `<div class="day-preview-note">🎉 ${lunarInfo}</div>`;
+    if (hasNote) infoHtml += `<div class="day-preview-note">📝 ${escapeHTML(state.dayNotes[dateStr])}</div>`;
+    if (hasTodo) infoHtml += `<div class="day-preview-note">✅ ${escapeHTML(state.todos[dateStr])}</div>`;
+    if (isHoliday) infoHtml += `<div class="day-preview-note">🎉 ${escapeHTML(lunarInfo)}</div>`;
     $('#previewInfo').innerHTML = infoHtml;
 
     positionPreviewCard(e);

@@ -1,6 +1,6 @@
 // ===== 重要日期 & 待办事项模块 =====
 
-import { $, $$, uuid, showToast } from './utils.js';
+import { $, $$, uuid, showToast, escapeHTML } from './utils.js';
 import { state } from './state.js';
 import { renderCalendar } from './calendar.js';
 
@@ -38,22 +38,42 @@ export function renderImportantDatesList() {
     today.setHours(0, 0, 0, 0);
 
     list.innerHTML = state.importantDates.map(item => {
-        const [year, month, day] = item.date.split('-').map(Number);
-        let targetDate = new Date(today.getFullYear(), month - 1, day);
-        if (targetDate < today) {
-            targetDate.setFullYear(targetDate.getFullYear() + 1);
+        const match = String(item?.date || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!match) return '';
+
+        const year = parseInt(match[1], 10);
+        const month = parseInt(match[2], 10);
+        const day = parseInt(match[3], 10);
+        const isRepeat = item.repeat !== false;
+
+        let targetDate;
+        if (isRepeat) {
+            targetDate = new Date(today.getFullYear(), month - 1, day);
+            if (targetDate < today) {
+                targetDate.setFullYear(targetDate.getFullYear() + 1);
+            }
+        } else {
+            targetDate = new Date(year, month - 1, day);
         }
+
         const daysUntil = Math.ceil((targetDate - today) / (1000 * 60 * 60 * 24));
-        const countdownText = daysUntil === 0 ? '就是今天！' : `还有${daysUntil}天`;
+        const countdownText = daysUntil === 0
+            ? '就是今天！'
+            : daysUntil > 0
+                ? `还有${daysUntil}天`
+                : `已过${Math.abs(daysUntil)}天`;
+        const dateLabel = isRepeat
+            ? `${month}月${day}日 (每年)`
+            : `${year}年${month}月${day}日`;
 
         return `
-            <div class="important-date-item" data-id="${item.id}">
-                <span class="important-date-icon">${item.icon}</span>
+            <div class="important-date-item" data-id="${escapeHTML(item.id)}">
+                <span class="important-date-icon">${escapeHTML(item.icon || '📅')}</span>
                 <div class="important-date-info">
-                    <div class="important-date-name">${item.name}</div>
-                    <div class="important-date-date">${month}月${day}日 ${item.repeat ? '(每年)' : ''}</div>
+                    <div class="important-date-name">${escapeHTML(item.name)}</div>
+                    <div class="important-date-date">${escapeHTML(dateLabel)}</div>
                 </div>
-                <span class="important-date-countdown">${countdownText}</span>
+                <span class="important-date-countdown">${escapeHTML(countdownText)}</span>
             </div>
         `;
     }).join('');
@@ -71,14 +91,16 @@ export function openImportantDateModal(id = null) {
 
     if (id) {
         const item = state.importantDates.find(d => d.id === id);
-        if (item) {
-            title.textContent = '编辑重要日期';
-            $('#importantDateDate').value = item.date;
-            $('#importantDateName').value = item.name;
-            $('#importantDateIcon').value = item.icon;
-            $('#importantDateRepeat').checked = item.repeat;
-            deleteBtn.style.display = 'block';
+        if (!item) {
+            editingImportantDateId = null;
+            return;
         }
+        title.textContent = '编辑重要日期';
+        $('#importantDateDate').value = item.date;
+        $('#importantDateName').value = item.name;
+        $('#importantDateIcon').value = item.icon;
+        $('#importantDateRepeat').checked = item.repeat !== false;
+        deleteBtn.style.display = 'block';
     } else {
         title.textContent = '添加重要日期';
         $('#importantDateDate').value = '';

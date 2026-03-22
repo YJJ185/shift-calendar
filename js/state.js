@@ -63,6 +63,40 @@ export function loadState() {
 }
 
 /**
+ * 解析本地日期（避免 YYYY-MM-DD 被当成 UTC 解析）
+ * @param {string|Date|number} value
+ * @returns {Date|null}
+ */
+export function parseLocalDate(value) {
+    if (value instanceof Date) {
+        if (Number.isNaN(value.getTime())) return null;
+        return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+    }
+
+    if (typeof value === 'string') {
+        const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (match) {
+            const year = parseInt(match[1], 10);
+            const month = parseInt(match[2], 10);
+            const day = parseInt(match[3], 10);
+            const date = new Date(year, month - 1, day);
+            if (
+                date.getFullYear() === year &&
+                date.getMonth() === month - 1 &&
+                date.getDate() === day
+            ) {
+                return date;
+            }
+            return null;
+        }
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+}
+
+/**
  * 格式化日期为 YYYY-MM-DD
  */
 export function formatDate(date) {

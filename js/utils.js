@@ -5,6 +5,31 @@ export const $$ = (sel) => document.querySelectorAll(sel);
 export const uuid = () => Date.now().toString(36) + Math.random().toString(36).substr(2);
 
 /**
+ * HTML 转义，防止把用户输入直接注入到 innerHTML
+ * @param {any} value
+ * @returns {string}
+ */
+export function escapeHTML(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+/**
+ * 颜色值白名单，仅允许 #RGB / #RRGGBB
+ * @param {string} value
+ * @param {string} fallback
+ * @returns {string}
+ */
+export function safeColor(value, fallback = '#9CA3AF') {
+    const color = String(value ?? '').trim();
+    return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(color) ? color : fallback;
+}
+
+/**
  * 颜色调整工具
  * @param {string} hex - 十六进制颜色
  * @param {number} amount - 调整量 (正值变亮，负值变暗)

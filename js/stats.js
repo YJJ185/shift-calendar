@@ -1,6 +1,6 @@
 // ===== 统计功能模块 =====
 
-import { $ } from './utils.js';
+import { $, escapeHTML, safeColor } from './utils.js';
 import { state } from './state.js';
 import { getShiftForDate } from './calendar.js';
 
@@ -53,12 +53,13 @@ export function updateStats() {
         if (count > 0) {
             hasData = true;
             const percentage = Math.round((count / daysInMonth) * 100);
+            const barColor = safeColor(type.color, '#9CA3AF');
 
             // 添加到综合进度条
             const segment = document.createElement('div');
             segment.className = 'stats-bar-segment';
             segment.style.width = `${percentage}%`;
-            segment.style.background = type.color;
+            segment.style.background = barColor;
             segment.title = `${type.name}: ${count}天 (${percentage}%)`;
             chartBar.appendChild(segment);
 
@@ -68,13 +69,13 @@ export function updateStats() {
             item.innerHTML = `
                 <div class="stats-item-header">
                     <div class="stats-item-left">
-                        <span class="stats-icon">${type.icon}</span>
-                        <span class="stats-name">${type.name}</span>
+                        <span class="stats-icon">${escapeHTML(type.icon)}</span>
+                        <span class="stats-name">${escapeHTML(type.name)}</span>
                     </div>
                     <span class="stats-count">${count}天 <span class="stats-percent">${percentage}%</span></span>
                 </div>
                 <div class="stats-progress">
-                    <div class="stats-progress-bar" style="width: ${percentage}%; background: ${type.color}"></div>
+                    <div class="stats-progress-bar" style="width: ${percentage}%; background: ${barColor}"></div>
                 </div>
             `;
             container.appendChild(item);

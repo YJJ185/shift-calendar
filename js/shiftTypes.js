@@ -1,6 +1,6 @@
 // ===== 班次类型管理模块 =====
 
-import { $, $$, uuid, showToast } from './utils.js';
+import { $, $$, uuid, showToast, escapeHTML, safeColor } from './utils.js';
 import { state, saveState } from './state.js';
 import { renderPatternBuilder, renderPatternPreview } from './patterns.js';
 
@@ -15,9 +15,9 @@ export function renderShiftTypes() {
     if (!list) return;
 
     list.innerHTML = state.shiftTypes.map(t => `
-        <div class="shift-type-item" data-id="${t.id}">
-            <div class="shift-type-badge" style="background:${t.color}">${t.icon}</div>
-            <span class="shift-type-name">${t.name}</span>
+        <div class="shift-type-item" data-id="${escapeHTML(t.id)}">
+            <div class="shift-type-badge" style="background:${safeColor(t.color, '#9CA3AF')}">${escapeHTML(t.icon)}</div>
+            <span class="shift-type-name">${escapeHTML(t.name)}</span>
             <span class="shift-type-edit">编辑</span>
         </div>
     `).join('');
@@ -44,10 +44,14 @@ export function openShiftTypeModal(id = null) {
 
     if (id) {
         const type = state.shiftTypes.find(t => t.id === id);
+        if (!type) {
+            editingShiftTypeId = null;
+            return;
+        }
         title.textContent = '编辑班次类型';
         nameInput.value = type.name;
         iconInput.value = type.icon;
-        colorInput.value = type.color;
+        colorInput.value = safeColor(type.color, '#FFB74D');
         deleteBtn.style.display = 'block';
     } else {
         title.textContent = '添加班次类型';
@@ -75,7 +79,7 @@ export function closeShiftTypeModal() {
 export function saveShiftType() {
     const name = $('#shiftTypeName').value.trim();
     const icon = $('#shiftTypeIcon').value.trim() || '📌';
-    const color = $('#shiftTypeColor').value;
+    const color = safeColor($('#shiftTypeColor').value, '#FFB74D');
 
     if (!name) {
         showToast('请输入班次名称', 'error');
