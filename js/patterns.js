@@ -1,7 +1,7 @@
 // ===== 排班规律管理模块 =====
 
 import { $, uuid, showToast, escapeHTML, safeColor } from './utils.js';
-import { state, saveState, parseLocalDate } from './state.js';
+import { state, saveState, parseLocalDate, formatDate } from './state.js';
 import { renderCalendar } from './calendar.js';
 
 /**
@@ -143,19 +143,20 @@ export function updateSchedulePreview() {
  * 生成排班
  */
 export function generateSchedule() {
-    const startDate = $('#startDate')?.value;
+    const startDateInput = $('#startDate');
+    const startDate = startDateInput?.value || formatDate(new Date());
+    if (startDateInput && !startDateInput.value) {
+        startDateInput.value = startDate;
+    }
     const startIndex = parseInt($('#startShift')?.value) || 0;
     const name = $('#scheduleName')?.value.trim() || `排班方案 ${state.schedules.length + 1}`;
-
-    if (!startDate) {
-        showToast('请选择起始日期', 'error');
-        return;
-    }
 
     if (state.pattern.length === 0) {
         showToast('请设置排班规律', 'error');
         return;
     }
+
+    const weekendRestMode = !!$('#weekendRestMode')?.checked;
 
     const schedule = {
         id: uuid(),
@@ -165,7 +166,7 @@ export function generateSchedule() {
         startIndex,
         pattern: [...state.pattern],
         shiftTypes: JSON.parse(JSON.stringify(state.shiftTypes)),
-        weekendRestMode: $('#weekendRestMode')?.checked || false,
+        weekendRestMode,
         isActive: true
     };
 

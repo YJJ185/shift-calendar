@@ -1,7 +1,7 @@
 // ===== 统计功能模块 =====
 
 import { $, escapeHTML, safeColor } from './utils.js';
-import { state } from './state.js';
+import { state, getScheduleShiftTypes, isRestShift, getWeekdayLabel } from './state.js';
 import { getShiftForDate } from './calendar.js';
 
 /**
@@ -29,8 +29,9 @@ export function updateStats() {
     const month = state.currentDate.getMonth();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
+    const scheduleShiftTypes = getScheduleShiftTypes(schedule);
     const stats = {};
-    state.shiftTypes.forEach(t => stats[t.id] = 0);
+    scheduleShiftTypes.forEach(t => stats[t.id] = 0);
 
     for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(year, month, day);
@@ -48,7 +49,7 @@ export function updateStats() {
     const chartBar = document.createElement('div');
     chartBar.className = 'stats-chart-bar';
 
-    state.shiftTypes.forEach(type => {
+    scheduleShiftTypes.forEach(type => {
         const count = stats[type.id] || 0;
         if (count > 0) {
             hasData = true;
@@ -114,7 +115,7 @@ export function updateCountdown() {
 
     // 检查今天是否是休息日
     const todayShift = getShiftForDate(schedule, today);
-    if (todayShift && todayShift.name === '休息') {
+    if (isRestShift(todayShift)) {
         countdownValue.textContent = '0';
         countdownNext.innerHTML = '<span class="countdown-today">🎉 今天就是休息日！</span>';
         return;
@@ -127,7 +128,7 @@ export function updateCountdown() {
         const checkDate = new Date(today);
         checkDate.setDate(checkDate.getDate() + i);
         const shift = getShiftForDate(schedule, checkDate);
-        if (shift && shift.name === '休息') {
+        if (isRestShift(shift)) {
             daysUntilRest = i;
             nextRestDate = checkDate;
             break;
@@ -138,8 +139,7 @@ export function updateCountdown() {
         countdownValue.textContent = daysUntilRest;
         const month = nextRestDate.getMonth() + 1;
         const day = nextRestDate.getDate();
-        const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-        const weekday = weekdays[nextRestDate.getDay()];
+        const weekday = getWeekdayLabel(nextRestDate);
         countdownNext.innerHTML = `🗓️ ${month}月${day}日 ${weekday}`;
     } else {
         countdownValue.textContent = '--';

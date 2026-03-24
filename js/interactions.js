@@ -2,10 +2,11 @@
 // 悬停预览、键盘快捷键、侧边栏Tab切换、涟漪效果
 
 import { $, $$, showToast, escapeHTML, safeColor } from './utils.js';
-import { state } from './state.js';
-import { getShiftForDate, navigateMonth, setMonthsToShow, goToToday } from './calendar.js';
+import { state, parseLocalDate, getWeekdayLabel } from './state.js';
+import { getShiftForDateInfo, navigateMonth, setMonthsToShow, goToToday } from './calendar.js';
 import { openHistoryModal } from './modals.js';
 import { closeExportDropdown } from './export.js';
+import { getHolidayInfo, getSolarTerm } from './holidays.js';
 import { getLunarDay } from './lunar.js';
 
 // ===== 侧边栏 Tab 切换 =====
@@ -73,42 +74,44 @@ function showDayPreview(dayEl, e) {
     const dateStr = dayEl.dataset.date;
     if (!dateStr) return;
 
-    const [year, month, day] = dateStr.split('-').map(Number);
-    const date = new Date(year, month - 1, day);
+    const date = parseLocalDate(dateStr);
+    if (!date) return;
 
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
     const hasNote = state.dayNotes && state.dayNotes[dateStr];
     const hasTodo = state.todos && state.todos[dateStr];
     const lunarInfo = getLunarDay(date);
-    const isHoliday = lunarInfo && (lunarInfo.includes('节') || lunarInfo.includes('除夕') || lunarInfo.includes('元旦'));
+    const holiday = getHolidayInfo(date);
+    const solarTerm = getSolarTerm(date);
+    const hasSpecialDay = !!holiday || !!solarTerm;
+    const displayDayText = holiday?.name || solarTerm || lunarInfo;
 
-    if (!hasNote && !hasTodo && !isHoliday) return;
-
-    const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+    if (!hasNote && !hasTodo && !hasSpecialDay) return;
 
     $('#previewDate').textContent = `${month}月${day}日`;
-    $('#previewWeekday').textContent = weekdays[date.getDay()];
-    $('#previewLunar').textContent = lunarInfo;
+    $('#previewWeekday').textContent = getWeekdayLabel(date);
+    $('#previewLunar').textContent = displayDayText;
 
     const schedule = state.schedules.find(s => s.id === state.activeScheduleId);
-    if (schedule) {
-        const shift = getShiftForDate(schedule, date);
-        if (shift) {
-            const shiftColor = safeColor(shift.color, '#9CA3AF');
-            $('#previewShift').innerHTML = `
-                <span class="day-preview-shift-icon">${escapeHTML(shift.icon)}</span>
-                <span class="day-preview-shift-name" style="color: ${shiftColor}">${escapeHTML(shift.name)}</span>
-            `;
-            $('#previewShift').style.background = shiftColor + '20';
-        } else {
-            $('#previewShift').innerHTML = '<span style="color: var(--text-muted)">无排班</span>';
-            $('#previewShift').style.background = 'transparent';
-        }
+    const shift = schedule ? getShiftForDateInfo(schedule, date, holiday).effectiveShift : null;
+    if (shift) {
+        const shiftColor = safeColor(shift.color, '#9CA3AF');
+        $('#previewShift').innerHTML = `
+            <span class="day-preview-shift-icon">${escapeHTML(shift.icon)}</span>
+            <span class="day-preview-shift-name" style="color: ${shiftColor}">${escapeHTML(shift.name)}</span>
+        `;
+        $('#previewShift').style.background = shiftColor + '20';
+    } else {
+        $('#previewShift').innerHTML = '<span style="color: var(--text-muted)">无排班</span>';
+        $('#previewShift').style.background = 'transparent';
     }
 
     let infoHtml = '';
     if (hasNote) infoHtml += `<div class="day-preview-note">📝 ${escapeHTML(state.dayNotes[dateStr])}</div>`;
     if (hasTodo) infoHtml += `<div class="day-preview-note">✅ ${escapeHTML(state.todos[dateStr])}</div>`;
-    if (isHoliday) infoHtml += `<div class="day-preview-note">🎉 ${escapeHTML(lunarInfo)}</div>`;
+    if (holiday) infoHtml += `<div class="day-preview-note">${escapeHTML(holiday.name)}</div>`;
+    else if (solarTerm) infoHtml += `<div class="day-preview-note">节气：${escapeHTML(solarTerm)}</div>`;
     $('#previewInfo').innerHTML = infoHtml;
 
     positionPreviewCard(e);

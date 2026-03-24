@@ -1,7 +1,7 @@
 // ===== 重要日期 & 待办事项模块 =====
 
 import { $, $$, uuid, showToast, escapeHTML } from './utils.js';
-import { state } from './state.js';
+import { state, rebuildImportantDatesIndex } from './state.js';
 import { renderCalendar } from './calendar.js';
 
 // ===== 重要日期 =====
@@ -19,9 +19,11 @@ export function loadImportantDates() {
     } else {
         state.importantDates = [];
     }
+    rebuildImportantDatesIndex();
 }
 
 export function saveImportantDates() {
+    rebuildImportantDatesIndex();
     localStorage.setItem('shift-calendar-important-dates', JSON.stringify(state.importantDates));
 }
 

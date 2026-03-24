@@ -1,12 +1,11 @@
 // ===== 导出功能模块 =====
 
 import { $, adjustColor, showToast, safeColor } from './utils.js';
-import { state, saveState, formatDate, parseLocalDate, defaultShiftTypes } from './state.js';
+import { state, saveState, formatDate, parseLocalDate, defaultShiftTypes, normalizeShiftType, normalizeDayOverridesBySchedule, findImportantDateForDate } from './state.js';
 import { getHolidayInfo, getSolarTerm } from './holidays.js';
 import { getLunarDay } from './lunar.js';
-import { getShiftForDate, renderCalendar } from './calendar.js';
-import { renderShiftTypes } from './shiftTypes.js';
-import { renderPatternPreview } from './patterns.js';
+import { getShiftForDateInfo, renderCalendar } from './calendar.js';
+import { syncDraftFromSchedule, resetDraftForNoActiveSchedule } from './shiftTypes.js';
 import { saveImportantDates, renderImportantDatesList, saveTodos } from './features.js';
 
 const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -64,22 +63,28 @@ function _normalizeShiftTypes(rawShiftTypes, fallbackShiftTypes, warnings, scope
         }
 
         const fb = fallback[index % fallback.length] || defaultShiftTypes[index % defaultShiftTypes.length];
-        const id = _uniqueId(item.id, usedIds, `shift-${index + 1}`);
-        const name = _toSafeString(item.name, fb?.name || `班次${index + 1}`);
-        const icon = _toSafeString(item.icon, fb?.icon || '📌');
-        const color = safeColor(item.color, fb?.color || '#9CA3AF');
-        normalized.push({ id, name, icon, color });
+        const base = normalizeShiftType(item, fb);
+        const id = _uniqueId(base.id, usedIds, `shift-${index + 1}`);
+        normalized.push({
+            ...base,
+            id,
+            name: _toSafeString(base.name, fb?.name || `班次${index + 1}`),
+            icon: _toSafeString(base.icon, fb?.icon || '📌'),
+            color: safeColor(base.color, fb?.color || '#9CA3AF')
+        });
     });
 
     if (normalized.length === 0) {
         _pushWarning(warnings, `${scopeLabel}: 未检测到可用班次，已使用默认班次`);
         defaultShiftTypes.forEach((item, index) => {
-            const id = _uniqueId(item.id, usedIds, `shift-${index + 1}`);
+            const base = normalizeShiftType(item, item);
+            const id = _uniqueId(base.id, usedIds, `shift-${index + 1}`);
             normalized.push({
+                ...base,
                 id,
-                name: _toSafeString(item.name, `班次${index + 1}`),
-                icon: _toSafeString(item.icon, '📌'),
-                color: safeColor(item.color, '#9CA3AF')
+                name: _toSafeString(base.name, `班次${index + 1}`),
+                icon: _toSafeString(base.icon, '📌'),
+                color: safeColor(base.color, '#9CA3AF')
             });
         });
     }
@@ -178,9 +183,45 @@ function _normalizeDateValueMap(rawMap, valueNormalizer, warnings, label) {
     return normalized;
 }
 
+function _normalizeDayOverrides(rawDayOverrides, schedules, activeScheduleId, warnings) {
+    const scheduleShiftIdSets = new Map(
+        schedules.map(schedule => [schedule.id, new Set((schedule.shiftTypes || []).map(t => t.id))])
+    );
+
+    const normalized = normalizeDayOverridesBySchedule(
+        rawDayOverrides,
+        activeScheduleId,
+        schedules.map(schedule => schedule.id)
+    );
+    const scopedOverrides = {};
+
+    Object.entries(normalized).forEach(([scheduleId, dateMap]) => {
+        const shiftIdSet = scheduleShiftIdSets.get(scheduleId);
+        if (!shiftIdSet) {
+            _pushWarning(warnings, `dayOverrides 中存在未知方案 ${scheduleId}，已跳过`);
+            return;
+        }
+
+        const nextDateMap = {};
+        Object.entries(dateMap).forEach(([dateKey, shiftId]) => {
+            if (!shiftIdSet.has(shiftId)) {
+                _pushWarning(warnings, `dayOverrides 中 ${scheduleId}/${dateKey} 的班次 ${shiftId} 无法匹配对应方案，已跳过`);
+                return;
+            }
+            nextDateMap[dateKey] = shiftId;
+        });
+
+        if (Object.keys(nextDateMap).length > 0) {
+            scopedOverrides[scheduleId] = nextDateMap;
+        }
+    });
+
+    return scopedOverrides;
+}
+
 function _normalizeImportantDates(rawImportantDates, warnings) {
     const source = Array.isArray(rawImportantDates) ? rawImportantDates : [];
-    if (!Array.isArray(rawImportantDates) && rawImportantDates !== undefined) {
+    if (rawImportantDates !== undefined && !Array.isArray(rawImportantDates)) {
         _pushWarning(warnings, 'importantDates 结构异常，已回退为空');
     }
 
@@ -193,21 +234,29 @@ function _normalizeImportantDates(rawImportantDates, warnings) {
             return;
         }
 
-        const date = _toSafeString(item.date, '');
-        if (!_isValidDateKey(date)) {
+        const parsedDate = parseLocalDate(item.date);
+        const name = _toSafeString(item.name, '');
+        if (!parsedDate) {
             _pushWarning(warnings, `importantDates 第 ${index + 1} 项日期无效，已跳过`);
             return;
         }
+        if (!name) {
+            _pushWarning(warnings, `importantDates 第 ${index + 1} 项名称为空，已跳过`);
+            return;
+        }
 
-        const id = _uniqueId(item.id, usedIds, `important-${index + 1}`);
-        const name = _toSafeString(item.name, '重要日期');
-        const icon = _toSafeString(item.icon, '📅');
-        const repeat = item.repeat !== false;
-        normalized.push({ id, date, name, icon, repeat });
+        normalized.push({
+            id: _uniqueId(item.id, usedIds, `important-date-${index + 1}`),
+            date: formatDate(parsedDate),
+            name,
+            icon: _toSafeString(item.icon, '📅'),
+            repeat: item.repeat !== false
+        });
     });
 
     return normalized;
 }
+
 
 function _normalizeImportPayload(rawData) {
     if (!_isPlainObject(rawData)) {
@@ -226,15 +275,11 @@ function _normalizeImportPayload(rawData) {
         activeScheduleId = schedules[0]?.id || null;
     }
 
-    const globalShiftIdSet = new Set(shiftTypes.map(t => t.id));
-    const dayOverrides = _normalizeDateValueMap(
+    const dayOverrides = _normalizeDayOverrides(
         rawData.dayOverrides,
-        (value) => {
-            const id = _toSafeString(value, '');
-            return globalShiftIdSet.has(id) ? id : null;
-        },
-        warnings,
-        'dayOverrides'
+        schedules,
+        activeScheduleId,
+        warnings
     );
 
     const dayNotes = _normalizeDateValueMap(
@@ -513,7 +558,8 @@ function _drawCalendarToCanvas(schedule) {
                         ctx.fillText('今天', tx + tw / 2, ty + th / 2);
                     }
 
-                    const shift = getShiftForDate(schedule, date);
+                    const shiftInfo = getShiftForDateInfo(schedule, date, holiday);
+                    const shift = shiftInfo.effectiveShift;
                     if (shift) {
                         const cp = 6;
                         const cardX = cx + cp, cardY = cy + 30;
@@ -538,7 +584,7 @@ function _drawCalendarToCanvas(schedule) {
                         ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
                     }
 
-                    if (state.dayOverrides[dateStr]) {
+                    if (shiftInfo.isOverride) {
                         const bw = 16, bh = 14;
                         _roundRect(ctx, cx + 4, cy + CELL_H - bh - 4, bw, bh, 3);
                         ctx.fillStyle = _hexToRgba(theme.accentPrimary, 0.9); ctx.fill();
@@ -553,14 +599,11 @@ function _drawCalendarToCanvas(schedule) {
                         ctx.fillText('📝', cx + 24, cy + CELL_H - 4);
                     }
 
-                    if (state.importantDates && state.importantDates.length > 0) {
-                        const md = `${mo}-${dy}`;
-                        const imp = state.importantDates.find(d => { const [, m2, d2] = d.date.split('-'); return `${m2}-${d2}` === md; });
-                        if (imp) {
-                            ctx.font = '14px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-                            ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
-                            ctx.fillText(imp.icon, cx + CELL_W - 4, cy + CELL_H - 2);
-                        }
+                    const imp = findImportantDateForDate(date);
+                    if (imp) {
+                        ctx.font = '14px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+                        ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+                        ctx.fillText(imp.icon || '📅', cx + CELL_W - 4, cy + CELL_H - 2);
                     }
 
                     if (state.todos && state.todos[dateStr]) {
@@ -665,6 +708,7 @@ export function importFromJson(event) {
             state.shiftTypes = normalized.shiftTypes;
             state.schedules = normalized.schedules;
             state.activeScheduleId = normalized.activeScheduleId;
+            state.pattern = [];
             state.dayOverrides = normalized.dayOverrides;
             state.dayNotes = normalized.dayNotes;
             state.importantDates = normalized.importantDates;
@@ -672,25 +716,21 @@ export function importFromJson(event) {
 
             const activeSchedule = state.schedules.find(s => s.id === state.activeScheduleId) || null;
             if (activeSchedule) {
-                state.pattern = [...activeSchedule.pattern];
                 state.currentDate = parseLocalDate(activeSchedule.startDate) || new Date();
-                if ($('#scheduleName')) $('#scheduleName').value = activeSchedule.name || '';
-                if ($('#startDate')) $('#startDate').value = activeSchedule.startDate || '';
             } else {
-                state.pattern = [];
-                if ($('#scheduleName')) $('#scheduleName').value = '';
+                state.currentDate = new Date();
+            }
+
+            if (activeSchedule) {
+                syncDraftFromSchedule(activeSchedule);
+            } else {
+                resetDraftForNoActiveSchedule();
             }
 
             saveState();
             saveImportantDates();
             saveTodos();
 
-            renderShiftTypes();
-            renderPatternPreview();
-            if (activeSchedule && $('#startShift')) {
-                $('#startShift').value = String(activeSchedule.startIndex || 0);
-                $('#startShift').dispatchEvent(new Event('change'));
-            }
             renderCalendar();
             renderImportantDatesList();
 

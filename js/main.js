@@ -1,10 +1,9 @@
 // ===== 入口文件 =====
 // 导入所有模块并初始化应用
 
-import { $, $$ } from './utils.js';
-import { state, loadState, formatDate } from './state.js';
-import { renderShiftTypes, initShiftTypeEvents } from './shiftTypes.js';
-import { renderPatternPreview, initPatternEvents } from './patterns.js';
+import { state, loadState } from './state.js';
+import { initShiftTypeEvents, syncDraftFromSchedule, resetDraftForNoActiveSchedule } from './shiftTypes.js';
+import { initPatternEvents } from './patterns.js';
 import { renderCalendar, initCalendarEvents } from './calendar.js';
 import { initExportEvents } from './export.js';
 import { initTheme, initThemeEvents } from './theme.js';
@@ -12,7 +11,6 @@ import { initEditShiftModal, initModalEvents } from './modals.js';
 import { loadImportantDates, loadTodos, renderImportantDatesList, initFeatureEvents } from './features.js';
 import { initGestures, initMobileEvents } from './mobile.js';
 import { initSidebarTabs, initDayHoverPreview, initKeyboardShortcuts, initRippleEffect } from './interactions.js';
-import { updateCountdown } from './stats.js';
 import { fetchHolidaysFromAPI } from './holidays.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -24,13 +22,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2. 初始化 UI 组件
     initEditShiftModal();
 
-    const today = formatDate(new Date());
-    if ($('#startDate')) $('#startDate').value = today;
-    state.currentDate = new Date();
+    const activeSchedule = state.schedules.find(schedule => schedule.id === state.activeScheduleId) || null;
+    if (activeSchedule) {
+        syncDraftFromSchedule(activeSchedule);
+    } else {
+        resetDraftForNoActiveSchedule();
+    }
 
     // 3. 渲染
-    renderShiftTypes();
-    renderPatternPreview();
     renderCalendar();
     renderImportantDatesList();
 
@@ -55,9 +54,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 6. 键盘快捷键
     initKeyboardShortcuts();
-
-    // 7. 倒计时
-    updateCountdown();
 
     // 8. 后台获取最新假期数据
     const currentYear = new Date().getFullYear();

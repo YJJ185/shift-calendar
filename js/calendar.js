@@ -1,37 +1,33 @@
 // ===== 日历渲染模块 =====
 
 import { $, $$, adjustColor, showToast, escapeHTML, safeColor } from './utils.js';
-import { state, saveState, parseLocalDate } from './state.js';
+import {
+    state,
+    saveState,
+    parseLocalDate,
+    formatDate,
+    getScheduleShiftTypes,
+    getScheduleDayOverrides,
+    findShiftById,
+    findShiftByKind,
+    isNightShift,
+    isDutyShift,
+    findImportantDateForDate
+} from './state.js';
 import { getHolidayInfo, getSolarTerm } from './holidays.js';
 import { getLunarDay } from './lunar.js';
 import { updateStats, updateCountdown } from './stats.js';
 
-/**
- * 获取某日期的班次
- */
-export function getShiftForDate(schedule, date) {
-    if (!schedule || !Array.isArray(schedule.pattern) || schedule.pattern.length === 0) {
+function getBaseShiftForDate(schedule, target, shiftTypes) {
+    if (!schedule || !(target instanceof Date) || !Array.isArray(schedule.pattern) || schedule.pattern.length === 0) {
         return null;
     }
 
-    const target = parseLocalDate(date);
     const start = parseLocalDate(schedule.startDate);
-    if (!target || !start) {
+    if (!start) {
         return null;
     }
 
-    const year = target.getFullYear();
-    const month = String(target.getMonth() + 1).padStart(2, '0');
-    const day = String(target.getDate()).padStart(2, '0');
-    const dateStr = `${year}-${month}-${day}`;
-
-    // 检查临时调班
-    if (state.dayOverrides[dateStr]) {
-        const overrideShiftId = state.dayOverrides[dateStr];
-        return state.shiftTypes.find(t => t.id === overrideShiftId);
-    }
-
-    // 正常计算班次
     start.setHours(0, 0, 0, 0);
     target.setHours(0, 0, 0, 0);
 
@@ -41,32 +37,106 @@ export function getShiftForDate(schedule, date) {
     const pattern = schedule.pattern;
     const idx = (schedule.startIndex + diffDays) % pattern.length;
     const shiftId = pattern[idx];
-    const shift = schedule.shiftTypes.find(t => t.id === shiftId);
+    return findShiftById(shiftTypes, shiftId);
+}
 
-    // 周末/法定节假日自动休息逻辑
-    if (schedule.weekendRestMode) {
-        const holiday = getHolidayInfo(target);
+function getOverrideShiftForDate(schedule, dateStr, shiftTypes) {
+    if (!schedule || !dateStr) return null;
 
-        // 如果是法定节假日，直接休息（忽略排班规律）
-        if (holiday && holiday.type === 'holiday') {
-            const restShift = schedule.shiftTypes.find(t => t.name.includes('休息') || t.name === '休息');
-            if (restShift) return restShift;
-        }
+    const overrideShiftId = getScheduleDayOverrides(schedule)[dateStr];
+    if (!overrideShiftId) return null;
+    return findShiftById(shiftTypes, overrideShiftId);
+}
 
-        // 如果不是法定补班日，才进行正常的周末判定
-        const isMakeupWorkday = holiday && holiday.type === 'workday';
-        if (!isMakeupWorkday) {
-            const dayOfWeek = target.getDay();
-            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-            if (isWeekend && shift && !['值班', '夜班'].includes(shift.name)) {
-                const restShift = schedule.shiftTypes.find(t => t.name.includes('休息') || t.name === '休息');
-                if (restShift) return restShift;
-            }
-        }
+function applyWeekendRestMode(schedule, target, shiftTypes, effectiveShift, overrideShift, holiday) {
+    if (!schedule?.weekendRestMode || !target || overrideShift) {
+        return effectiveShift;
     }
 
-    return shift;
+    const resolvedHoliday = holiday === undefined ? getHolidayInfo(target) : holiday;
+    const restShift = findShiftByKind(shiftTypes, 'rest');
+    const isMakeupWorkday = resolvedHoliday && resolvedHoliday.type === 'workday';
+
+    if (resolvedHoliday && resolvedHoliday.type === 'holiday' && restShift) {
+        return restShift;
+    }
+
+    if (isMakeupWorkday) {
+        return effectiveShift;
+    }
+
+    const dayOfWeek = target.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    if (isWeekend && effectiveShift && !isDutyShift(effectiveShift) && !isNightShift(effectiveShift) && restShift) {
+        return restShift;
+    }
+
+    return effectiveShift;
 }
+
+export function getShiftForDateInfo(schedule, date, holiday) {
+    if (!schedule) {
+        return {
+            date: parseLocalDate(date),
+            dateStr: null,
+            shiftTypes: getScheduleShiftTypes(null),
+            baseShift: null,
+            overrideShift: null,
+            effectiveShift: null,
+            isOverride: false
+        };
+    }
+
+    const target = parseLocalDate(date);
+    if (!target) {
+        return {
+            date: null,
+            dateStr: null,
+            shiftTypes: getScheduleShiftTypes(schedule),
+            baseShift: null,
+            overrideShift: null,
+            effectiveShift: null,
+            isOverride: false
+        };
+    }
+
+    const shiftTypes = getScheduleShiftTypes(schedule);
+    const dateStr = formatDate(target);
+    const baseShift = getBaseShiftForDate(schedule, target, shiftTypes);
+    const overrideShift = getOverrideShiftForDate(schedule, dateStr, shiftTypes);
+    const effectiveShift = applyWeekendRestMode(schedule, target, shiftTypes, overrideShift || baseShift, overrideShift, holiday);
+
+    return {
+        date: target,
+        dateStr,
+        shiftTypes,
+        baseShift,
+        overrideShift,
+        effectiveShift,
+        isOverride: !!overrideShift
+    };
+}
+
+/**
+ * 获取某日期的班次
+ */
+export function getShiftForDate(schedule, date, holiday) {
+    if (!schedule) return null;
+
+    const target = parseLocalDate(date);
+    if (!target) return null;
+
+    const shiftTypes = getScheduleShiftTypes(schedule);
+    const dateStr = formatDate(target);
+    const overrideShift = getOverrideShiftForDate(schedule, dateStr, shiftTypes);
+    if (overrideShift) {
+        return overrideShift;
+    }
+
+    const baseShift = getBaseShiftForDate(schedule, target, shiftTypes);
+    return applyWeekendRestMode(schedule, target, shiftTypes, baseShift, null, holiday);
+}
+
 
 /**
  * 渲染日历
@@ -77,7 +147,7 @@ export function renderCalendar() {
 
     // 同步周末休息模式
     if ($('#weekendRestMode')) {
-        $('#weekendRestMode').checked = schedule ? !!schedule.weekendRestMode : false;
+        $('#weekendRestMode').checked = !!schedule?.weekendRestMode;
     }
 
     container.innerHTML = '';
@@ -92,6 +162,8 @@ export function renderCalendar() {
         `;
         container.appendChild(emptyDiv);
         updateCurrentRangeLabel();
+        updateStats();
+        updateCountdown();
         return;
     }
 
@@ -127,14 +199,15 @@ export function renderCalendar() {
             date.setHours(0, 0, 0, 0);
             const isToday = date.getTime() === today.getTime();
             const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-            const shift = getShiftForDate(schedule, date);
+            const holiday = getHolidayInfo(date);
+            const shiftInfo = getShiftForDateInfo(schedule, date, holiday);
+            const shift = shiftInfo.effectiveShift;
 
-            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            const hasOverride = !!state.dayOverrides[dateStr];
+            const dateStr = formatDate(date);
+            const hasOverride = shiftInfo.isOverride;
             const hasNote = !!state.dayNotes[dateStr];
 
             const lunarDayStr = getLunarDay(date);
-            const holiday = getHolidayInfo(date);
             const solarTerm = getSolarTerm(date);
 
             let displayText = lunarDayStr;
@@ -178,20 +251,9 @@ export function renderCalendar() {
             const noteIndicator = hasNote ? '<span class="day-note-indicator">📝</span>' : '';
 
             let importantDateBadge = '';
-            if (state.importantDates && state.importantDates.length > 0) {
-                const monthDay = `${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const importantDate = state.importantDates.find(d => {
-                    if (!d || !d.date) return false;
-                    if (d.repeat === false) return d.date === dateStr;
-                    const parts = String(d.date).split('-');
-                    if (parts.length !== 3) return false;
-                    const m = parts[1];
-                    const dd = parts[2];
-                    return `${m}-${dd}` === monthDay;
-                });
-                if (importantDate) {
-                    importantDateBadge = `<span class="important-date-badge" title="${escapeHTML(importantDate.name)}">${escapeHTML(importantDate.icon || '📅')}</span>`;
-                }
+            const importantDate = findImportantDateForDate(date);
+            if (importantDate) {
+                importantDateBadge = `<span class="important-date-badge" title="${escapeHTML(importantDate.name)}">${escapeHTML(importantDate.icon || '📅')}</span>`;
             }
 
             let todoIndicator = '';
@@ -308,12 +370,15 @@ export function initCalendarEvents() {
 
     // 医护智能排班模式
     $('#weekendRestMode')?.addEventListener('change', (e) => {
+        const enabled = e.target.checked;
+
         const schedule = state.schedules.find(s => s.id === state.activeScheduleId);
         if (schedule) {
-            schedule.weekendRestMode = e.target.checked;
+            schedule.weekendRestMode = enabled;
             saveState();
             renderCalendar();
-            showToast(e.target.checked ? '已开启周末双休保护' : '已关闭周末双休保护');
         }
+
+        showToast(enabled ? '已开启周末双休保护' : '已关闭周末双休保护');
     });
 }

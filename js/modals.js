@@ -2,9 +2,21 @@
 // 历史记录、确认对话框、日期编辑、单日排班修改
 
 import { $, $$, showToast, escapeHTML, safeColor } from './utils.js';
-import { state, saveState, formatDate, parseLocalDate } from './state.js';
-import { renderCalendar } from './calendar.js';
-import { renderPatternPreview, renderStartIndexOptions } from './patterns.js';
+import {
+    state,
+    saveState,
+    formatDate,
+    parseLocalDate,
+    getWeekdayLabel,
+    getScheduleShiftTypes,
+    setScheduleDayOverride,
+    deleteScheduleDayOverride,
+    findShiftById,
+    findShiftByKind,
+    isDutyShift
+} from './state.js';
+import { renderCalendar, getShiftForDateInfo } from './calendar.js';
+import { syncDraftFromSchedule, resetDraftForNoActiveSchedule } from './shiftTypes.js';
 import { getLunarDay } from './lunar.js';
 import { saveTodos } from './features.js';
 
@@ -69,17 +81,12 @@ function initHistoryListEvents() {
 
         const item = e.target.closest('.history-item');
         if (item) {
-                const schedule = state.schedules.find(s => s.id === item.dataset.id);
-                if (schedule) {
-                    state.activeScheduleId = schedule.id;
-                    state.currentDate = parseLocalDate(schedule.startDate) || new Date();
-                    state.pattern = [...schedule.pattern];
-                    $('#scheduleName').value = schedule.name;
-                    $('#startDate').value = schedule.startDate;
-                renderStartIndexOptions();
-                $('#startShift').value = schedule.startIndex || 0;
+            const schedule = state.schedules.find(s => s.id === item.dataset.id);
+            if (schedule) {
+                state.activeScheduleId = schedule.id;
+                state.currentDate = parseLocalDate(schedule.startDate) || new Date();
+                syncDraftFromSchedule(schedule);
                 saveState();
-                renderPatternPreview();
                 renderHistoryList();
                 renderCalendar();
                 closeHistoryModal();
@@ -114,13 +121,16 @@ function deleteSchedule(scheduleId) {
     pendingDeleteScheduleId = scheduleId;
     showConfirmDialog(`确定要删除方案 "${schedule.name}" 吗？`, () => {
         state.schedules = state.schedules.filter(s => s.id !== pendingDeleteScheduleId);
+        delete state.dayOverrides[pendingDeleteScheduleId];
 
         if (state.activeScheduleId === pendingDeleteScheduleId) {
             if (state.schedules.length > 0) {
                 state.activeScheduleId = state.schedules[0].id;
                 state.currentDate = parseLocalDate(state.schedules[0].startDate) || new Date();
+                syncDraftFromSchedule(state.schedules[0]);
             } else {
                 state.activeScheduleId = null;
+                resetDraftForNoActiveSchedule();
             }
         }
 
@@ -140,35 +150,36 @@ let selectedShiftId = null;
 export function openDayEditModal(dateStr) {
     editingDateStr = dateStr;
     const modal = $('#dayEditModal');
+    const date = parseLocalDate(dateStr);
+    if (!date) return;
 
-    const [year, month, day] = dateStr.split('-').map(Number);
-    const date = new Date(year, month - 1, day);
-    const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
     const lunar = getLunarDay(date);
 
     $('#dayEditDate').innerHTML = `
-        <div class="date-main">${month}月${day}日 ${weekdays[date.getDay()]}</div>
+        <div class="date-main">${month}月${day}日 ${getWeekdayLabel(date)}</div>
         <div class="date-sub">${year}年</div>
         <div class="date-lunar">${escapeHTML(lunar)}</div>
     `;
     $('#dayEditTitle').textContent = `编辑 ${month}月${day}日`;
 
     const schedule = state.schedules.find(s => s.id === state.activeScheduleId);
+    const shiftInfo = getShiftForDateInfo(schedule, date);
     let currentShiftId = null;
 
     if (schedule) {
-        if (state.dayOverrides[dateStr]) {
-            currentShiftId = state.dayOverrides[dateStr];
-            $('#dayEditOverride').checked = true;
-        } else {
-            const shift = getShiftForDateOriginal(schedule, date);
-            currentShiftId = shift ? shift.id : null;
-            $('#dayEditOverride').checked = false;
-        }
+        currentShiftId = shiftInfo.isOverride
+            ? shiftInfo.overrideShift?.id || null
+            : shiftInfo.effectiveShift?.id || null;
+        $('#dayEditOverride').checked = shiftInfo.isOverride;
+    } else {
+        $('#dayEditOverride').checked = false;
     }
 
     selectedShiftId = currentShiftId;
-    renderDayEditShifts(currentShiftId);
+    renderDayEditShifts(shiftInfo.shiftTypes, currentShiftId);
     $('#dayNote').value = state.dayNotes[dateStr] || '';
     if ($('#dayTodo')) {
         $('#dayTodo').value = (state.todos && state.todos[dateStr]) || '';
@@ -176,27 +187,9 @@ export function openDayEditModal(dateStr) {
     modal.classList.add('active');
 }
 
-function getShiftForDateOriginal(schedule, date) {
-    const start = parseLocalDate(schedule.startDate);
-    const target = parseLocalDate(date);
-    if (!start || !target || !Array.isArray(schedule.pattern) || schedule.pattern.length === 0) {
-        return null;
-    }
-    start.setHours(0, 0, 0, 0);
-    target.setHours(0, 0, 0, 0);
-
-    const diffDays = Math.floor((target - start) / (1000 * 60 * 60 * 24));
-    if (diffDays < 0) return null;
-
-    const pattern = schedule.pattern;
-    const idx = (schedule.startIndex + diffDays) % pattern.length;
-    const shiftId = pattern[idx];
-    return schedule.shiftTypes.find(t => t.id === shiftId);
-}
-
-function renderDayEditShifts(selectedId) {
+function renderDayEditShifts(shiftTypes, selectedId) {
     const container = $('#dayEditShifts');
-    container.innerHTML = state.shiftTypes.map(t => `
+    container.innerHTML = shiftTypes.map(t => `
         <div class="day-edit-shift-btn ${t.id === selectedId ? 'selected' : ''}" 
              data-id="${escapeHTML(t.id)}" 
              style="background: ${safeColor(t.color, '#9CA3AF')}">
@@ -226,14 +219,16 @@ export function saveDayEdit() {
 
     const currentEditingDate = editingDateStr;
     const selectedShiftAtSave = selectedShiftId;
+    const scheduleIdAtSave = state.activeScheduleId;
     const isOverride = $('#dayEditOverride').checked;
     const note = $('#dayNote').value.trim();
     const todo = $('#dayTodo')?.value.trim() || '';
 
-    if (isOverride && selectedShiftId) {
-        state.dayOverrides[editingDateStr] = selectedShiftId;
-    } else {
-        delete state.dayOverrides[editingDateStr];
+    const schedule = state.schedules.find(s => s.id === state.activeScheduleId);
+    if (isOverride && selectedShiftId && schedule) {
+        setScheduleDayOverride(schedule, editingDateStr, selectedShiftId);
+    } else if (schedule) {
+        deleteScheduleDayOverride(schedule, editingDateStr);
     }
 
     if (note) {
@@ -255,14 +250,16 @@ export function saveDayEdit() {
     renderCalendar();
     closeDayEditModal();
     showToast(isOverride ? '已保存临时调班' : '已保存');
-    maybeAutoFillDutyFollowups(currentEditingDate, selectedShiftAtSave, isOverride);
+    maybeAutoFillDutyFollowups(currentEditingDate, selectedShiftAtSave, isOverride, scheduleIdAtSave);
 }
 
 export function clearDayOverride() {
     if (!editingDateStr) return;
 
-    delete state.dayOverrides[editingDateStr];
-    delete state.dayNotes[editingDateStr];
+    const schedule = state.schedules.find(s => s.id === state.activeScheduleId);
+    if (schedule) {
+        deleteScheduleDayOverride(schedule, editingDateStr);
+    }
 
     saveState();
     renderCalendar();
@@ -270,14 +267,16 @@ export function clearDayOverride() {
     showToast('已恢复默认排班');
 }
 
-function maybeAutoFillDutyFollowups(dateStr, shiftId, isOverride) {
-    if (!isOverride || !dateStr || !shiftId) return;
+function maybeAutoFillDutyFollowups(dateStr, shiftId, isOverride, scheduleId) {
+    if (!isOverride || !dateStr || !shiftId || !scheduleId) return;
 
-    const selectedShift = state.shiftTypes.find(t => t.id === shiftId);
-    if (!selectedShift || selectedShift.name !== '值班') return;
+    const schedule = state.schedules.find(s => s.id === scheduleId);
+    const shiftTypes = getScheduleShiftTypes(schedule);
+    const selectedShift = findShiftById(shiftTypes, shiftId);
+    if (!isDutyShift(selectedShift)) return;
 
-    const nightShift = state.shiftTypes.find(t => t.name === '夜班');
-    const restShift = state.shiftTypes.find(t => t.name.includes('休息') || t.name.includes('双休'));
+    const nightShift = findShiftByKind(shiftTypes, 'night');
+    const restShift = findShiftByKind(shiftTypes, 'rest');
     if (!nightShift || !restShift) return;
 
     const currentDate = parseLocalDate(dateStr);
@@ -291,9 +290,15 @@ function maybeAutoFillDutyFollowups(dateStr, shiftId, isOverride) {
     const nextNextDateStr = formatDate(d2);
 
     setTimeout(() => {
-        showConfirmDialog('检测到您设置了"值班"，是否自动将后两天设为"夜班"和"休息"？', () => {
-            state.dayOverrides[nextDateStr] = nightShift.id;
-            state.dayOverrides[nextNextDateStr] = restShift.id;
+        const latestSchedule = state.schedules.find(s => s.id === scheduleId);
+        if (!latestSchedule || state.activeScheduleId !== scheduleId) return;
+
+        showConfirmDialog(`检测到您设置了"${selectedShift.name}"，是否自动将后两天设为"${nightShift.name}"和"${restShift.name}"？`, () => {
+            const confirmedSchedule = state.schedules.find(s => s.id === scheduleId);
+            if (!confirmedSchedule || state.activeScheduleId !== scheduleId) return;
+
+            setScheduleDayOverride(confirmedSchedule, nextDateStr, nightShift.id);
+            setScheduleDayOverride(confirmedSchedule, nextNextDateStr, restShift.id);
             saveState();
             renderCalendar();
             showToast('已自动填充后两天班次');

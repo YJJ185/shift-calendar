@@ -1,11 +1,69 @@
 // ===== 班次类型管理模块 =====
 
 import { $, $$, uuid, showToast, escapeHTML, safeColor } from './utils.js';
-import { state, saveState } from './state.js';
-import { renderPatternBuilder, renderPatternPreview } from './patterns.js';
+import { state, saveState, formatDate, normalizeShiftType, defaultShiftTypes } from './state.js';
+import { renderPatternBuilder, renderPatternPreview, updateSchedulePreview } from './patterns.js';
 
 // 当前编辑的班次类型 ID
 let editingShiftTypeId = null;
+
+export function syncDraftFromSchedule(schedule = state.schedules.find(s => s.id === state.activeScheduleId)) {
+    if (!schedule) return;
+
+    state.shiftTypes = Array.isArray(schedule.shiftTypes)
+        ? schedule.shiftTypes.map(type => ({ ...type }))
+        : [];
+    state.pattern = Array.isArray(schedule.pattern) ? [...schedule.pattern] : [];
+
+    const startDateInput = $('#startDate');
+    if (startDateInput) {
+        startDateInput.value = schedule.startDate || '';
+    }
+
+    const scheduleNameInput = $('#scheduleName');
+    if (scheduleNameInput) {
+        scheduleNameInput.value = schedule.name || '';
+    }
+
+    renderShiftTypes();
+    renderPatternPreview();
+
+    const startShiftSelect = $('#startShift');
+    if (startShiftSelect && state.pattern.length > 0) {
+        const rawStartIndex = Number.parseInt(schedule.startIndex, 10) || 0;
+        const normalizedStartIndex = ((rawStartIndex % state.pattern.length) + state.pattern.length) % state.pattern.length;
+        startShiftSelect.value = String(normalizedStartIndex);
+        updateSchedulePreview();
+    }
+
+    const weekendRestModeInput = $('#weekendRestMode');
+    if (weekendRestModeInput) {
+        weekendRestModeInput.checked = !!schedule.weekendRestMode;
+    }
+}
+
+export function resetDraftForNoActiveSchedule(startDate = formatDate(new Date())) {
+    state.shiftTypes = defaultShiftTypes.map(type => normalizeShiftType(type, type));
+    state.pattern = [];
+
+    const scheduleNameInput = $('#scheduleName');
+    if (scheduleNameInput) {
+        scheduleNameInput.value = '';
+    }
+
+    const startDateInput = $('#startDate');
+    if (startDateInput) {
+        startDateInput.value = startDate;
+    }
+
+    const weekendRestModeInput = $('#weekendRestMode');
+    if (weekendRestModeInput) {
+        weekendRestModeInput.checked = false;
+    }
+
+    renderShiftTypes();
+    renderPatternPreview();
+}
 
 /**
  * 渲染班次类型列表
@@ -89,10 +147,10 @@ export function saveShiftType() {
     if (editingShiftTypeId) {
         const idx = state.shiftTypes.findIndex(t => t.id === editingShiftTypeId);
         if (idx !== -1) {
-            state.shiftTypes[idx] = { ...state.shiftTypes[idx], name, icon, color };
+            state.shiftTypes[idx] = normalizeShiftType({ ...state.shiftTypes[idx], name, icon, color }, state.shiftTypes[idx]);
         }
     } else {
-        state.shiftTypes.push({ id: uuid(), name, icon, color });
+        state.shiftTypes.push(normalizeShiftType({ id: uuid(), name, icon, color }));
     }
 
     saveState();
